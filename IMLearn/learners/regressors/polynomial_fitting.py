@@ -20,10 +20,9 @@ class PolynomialFitting(BaseEstimator):
             Degree of polynomial to fit
         """
         super().__init__()
-        # raise NotImplementedError()
         self.k = k
         self.coefs = None
-        self.lr = LinearRegression()
+        self.lr = LinearRegression(include_intercept=False)
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """

@@ -172,11 +172,10 @@ if __name__ == '__main__':
     processed_train_X, processed_train_y = preprocess_data(train_X, train_y)
     processed_train = pd.concat([processed_train_X, processed_train_y], axis=1)
     processed_test = preprocess_data(test_X)[0]
-    # raise NotImplementedError()
 
     # Question 3 - Feature evaluation with respect to response
-    # feature_evaluation(processed_train_X, processed_train_y)
-    # raise NotImplementedError()
+
+    feature_evaluation(processed_train_X, processed_train_y)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -204,4 +203,3 @@ if __name__ == '__main__':
                     layout=go.Layout(title="Loss as function of training set's size"))
     fig.write_image("C:/Users/segge/source/repos/IML_Exercises/Ex2/images/last.png", format="png", engine='orca')
     print("finish :)")
-    # raise NotImplementedError()

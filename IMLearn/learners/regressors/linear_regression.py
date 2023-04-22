@@ -53,10 +53,8 @@ class LinearRegression(BaseEstimator):
         """
         # raise NotImplementedError()
         if self.include_intercept_:
-            Z = np.concatenate([np.ones(X.shape[0]).reshape((X.shape[0], -1)), X], axis=1)
-        else:
-            Z = X
-        self.coefs_ = np.linalg.pinv(Z) @ y
+            X = np.concatenate([np.ones(X.shape[0]).reshape((X.shape[0], -1)), X], axis=1)
+        self.coefs_ = np.linalg.pinv(X) @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -74,8 +72,8 @@ class LinearRegression(BaseEstimator):
         """
         # raise NotImplementedError()
         if self.include_intercept_:
-            return np.concatenate((np.ones(X.shape[0]).reshape((X.shape[0], -1)), X), axis=1) @ self.coefs_.transpose()
-        return self.coefs_.transpose() @ X
+            return np.concatenate((np.ones(X.shape[0]).reshape((X.shape[0], -1)), X), axis=1) @ self.coefs_
+        return X @ self.coefs_
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

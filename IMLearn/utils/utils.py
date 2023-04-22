@@ -33,7 +33,16 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
         Responses of test samples
 
     """
-    raise NotImplementedError()
+    # todo is it ok to use this method and not sample?
+    X = X.reset_index(drop=True)
+    y = y.reset_index(drop=True)
+    train_rows = np.random.choice(X.shape[0], int(np.ceil(train_proportion * X.shape[0])), replace=False)
+    train_X, train_y = X.iloc[train_rows], y.iloc[train_rows]
+    test_X, test_y = X.drop(train_rows), y.drop(train_rows)
+    return train_X.reset_index(drop=True), \
+        train_y.reset_index(drop=True), \
+        test_X.reset_index(drop=True), \
+        test_y.reset_index(drop=True)
 
 
 def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
