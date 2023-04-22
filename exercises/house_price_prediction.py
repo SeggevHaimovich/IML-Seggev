@@ -1,13 +1,96 @@
 from IMLearn.utils import split_train_test
 from IMLearn.learners.regressors import LinearRegression
 
-from typing import NoReturn
+from typing import NoReturn, Optional
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
+
 pio.templates.default = "simple_white"
+
+ZIPCODE = "zipcode"
+PRICE = "price"
+SQFT_ABOVE_PERCENTAGE = "sqft_above_percentage"
+LONG = "long"
+LAT = "lat"
+ID = "id"
+YR_RENOVATED = "yr_renovated"
+YR_BUILT = "yr_built"
+CSV_PATH = "house_prices.csv"
+DATE = "date"
+
+after_preprocessing_columns = None
+means = None
+preprocess_train = False
+
+
+def change_rows(X: pd.DataFrame, y: pd.Series):
+    mask = X[(X.bedrooms == 0) | (X.bathrooms == 0) | (X.date.isnull()) | (X.date == '0')].index
+    return X.drop(mask), y.drop(mask)
+
+
+def change_column_training(X: pd.DataFrame):
+    # delete id, long, lat
+    processed = X.drop([ID, LAT, LONG, DATE], axis=1)
+    # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
+    # processed[SQFT_ABOVE_PERCENTAGE] = X.apply(lambda a: a.sqft_above / float(a.sqft_living) if a.sqft_living != 0 else 0, axis=1)
+    # processed[SQFT_ABOVE_PERCENTAGE] = X.sqft_above / X.sqft_living
+    processed.loc[:, 'zipcode'] = processed['zipcode'].astype(int)
+    processed = pd.get_dummies(processed, prefix_sep='=', columns=[ZIPCODE])
+    # processed.date = processed.date.apply((lambda a: int(a[:8])))
+
+    return processed
+
+
+def preprocess_data_training(X: pd.DataFrame, y: pd.Series):
+    global after_preprocessing_columns, means, preprocess_train
+    processed_X, processed_y = change_rows(X, y)
+    processed_X = change_column_training(processed_X)
+    after_preprocessing_columns = processed_X.columns
+    preprocess_train = True
+    # means = pd.DataFrame(columns=processed_X.columns)
+    # means.loc[0] = np.mean(processed_X, axis=0)
+    means = pd.Series(data=np.mean(processed_X, axis=0), index=processed_X.columns)
+    return processed_X.reset_index(drop=True), \
+        processed_y.reset_index(drop=True)
+
+
+def preprocess_data_testing(X: pd.DataFrame):
+    if not preprocess_train:
+        print("you have to preprocess the train set before preprocessing the test set")
+        exit(1)
+
+    processed = X.drop([ID, LAT, LONG, DATE], axis=1)
+
+    # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
+
+    # mask_date = processed.date[(processed.date == '0') | (processed.date.isnull())].index
+    # not_mask_date = processed.date[(processed.date != '0') & (processed.date.notnull())].index
+    # processed.loc[mask_date, 'date'] = 0
+    # processed.loc[not_mask_date, 'date'] = processed.date
+    def date_change_func(a):
+        if type(a) == str:
+            return int(a[:8])
+        elif a == '0':
+            return 0
+        else:
+            return means["date"]
+
+    # processed.date = processed.date.apply(date_change_func)
+
+    # processed[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(processed.shape[0]))
+    # processed.loc[(processed.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = processed.sqft_above / processed.sqft_living
+
+    processed = pd.get_dummies(processed, prefix_sep='=', columns=["zipcode"])
+    processed = processed.reindex(columns=after_preprocessing_columns, fill_value=0)
+
+    # todo fix this
+    for column in processed:
+        processed.loc[processed[column].isnull(), column] = means[column]
+    processed = processed.fillna(0)
+    return processed.reset_index(drop=True)
 
 
 def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
@@ -26,7 +109,11 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     Post-processed design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
-    raise NotImplementedError()
+    if y is not None:
+        return preprocess_data_training(X, y)
+    else:
+        return preprocess_data_testing(X), None
+    # raise NotImplementedError()
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -46,21 +133,50 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    raise NotImplementedError()
+    # def func(a):
+    #     return a.cov(y) / np.sqrt(a.var() * var_y)
+    #
+    # pearson = X.apply(func, axis=0)
+    # raise NotImplementedError()
+    var_y = y.var()
+    for column_name in X:
+        column_vec = X[column_name]
+        var_column = column_vec.var()
+        if not var_column:
+            continue
+        pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
+        title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
+        fig = px.scatter(x=column_vec, y=y, title=title)
+        fig.write_image(f"C:/Users/segge/source/repos/IML_Exercises/Ex2/images/{column_vec.name}.png", format="png", engine='orca')
+        print(column_name)
 
 
 if __name__ == '__main__':
-    np.random.seed(0)
-    df = pd.read_csv("../datasets/house_prices.csv")
+    # todo should i use sqft_living15 and sqft_lot15
+    # todo: ratio between neighbors and self?
+    # todo if the var is 0, i can throw the column
+    # todo cancel rows with too big values
+    # todo can i assume my training test will be from this database? if there is no null zipcode can i count on it (for the training set)
 
+    np.random.seed(0)
+    df = pd.read_csv(CSV_PATH)
+    mask = df[(df.price <= 0) | (df.price.isnull())].index
+    df = df.drop(mask, axis=0).reset_index(drop=True)
+
+    # checks:
     # Question 1 - split data into train and test sets
-    raise NotImplementedError()
+    proportion = 0.75
+    train_X, train_y, test_X, test_y = split_train_test(df.drop(df[[PRICE]], axis=1), df[PRICE], train_proportion=proportion)
 
     # Question 2 - Preprocessing of housing prices dataset
-    raise NotImplementedError()
+    processed_train_X, processed_train_y = preprocess_data(train_X, train_y)
+    processed_train = pd.concat([processed_train_X, processed_train_y], axis=1)
+    processed_test = preprocess_data(test_X)[0]
+    # raise NotImplementedError()
 
     # Question 3 - Feature evaluation with respect to response
-    raise NotImplementedError()
+    # feature_evaluation(processed_train_X, processed_train_y)
+    # raise NotImplementedError()
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -69,4 +185,23 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    raise NotImplementedError()
+    lr = LinearRegression()
+    var_pred, mean_pred = [], []
+    percentages = np.arange(10, 101)
+    for p in percentages:
+        predictions_per_p = []
+        for _ in range(10):
+            picked = processed_train.sample(frac=p / float(100), replace=False)
+            lr._fit(picked.drop(PRICE, axis=1).to_numpy(), picked.price.to_numpy())
+            predictions_per_p.append(lr._loss(processed_test.to_numpy(), test_y.to_numpy()))
+        var_pred.append(np.sqrt(np.var(predictions_per_p)))
+        mean_pred.append(np.mean(predictions_per_p))
+        print(p)
+    mean_pred, var_pred = np.array(mean_pred), np.array(var_pred)
+    fig = go.Figure(data=[go.Scatter(x=percentages, y=mean_pred, mode="markers+lines", name="Mean Prediction", line=dict(dash="dash"), marker=dict(color="green", opacity=.7)),
+                          go.Scatter(x=percentages, y=mean_pred - 2 * var_pred, fill=None, mode="lines", line=dict(color="lightgrey"), showlegend=False),
+                          go.Scatter(x=percentages, y=mean_pred + 2 * var_pred, fill='tonexty', mode="lines", line=dict(color="lightgrey"), showlegend=False)],
+                    layout=go.Layout(title="Loss as function of training set's size"))
+    fig.write_image("C:/Users/segge/source/repos/IML_Exercises/Ex2/images/last.png", format="png", engine='orca')
+    print("finish :)")
+    # raise NotImplementedError()
