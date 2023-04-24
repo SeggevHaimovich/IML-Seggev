@@ -18,83 +18,75 @@ LAT = "lat"
 ID = "id"
 YR_RENOVATED = "yr_renovated"
 YR_BUILT = "yr_built"
+DATE = "date"
+SQFT_BASEMENT = "sqft_basement"
+SQFT_LIVING15 = "sqft_living15"
+
 CSV_PATH = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
 IMG_PATH = "C:/Users/segge/source/repos/IML-Seggev/images/Ex2/houses/"
-DATE = "date"
 
 after_preprocessing_columns = None
 means = None
 preprocess_train = False
 
 
-def change_rows(X: pd.DataFrame, y: pd.Series):
-    mask = X[(X.bedrooms == 0) | (X.bathrooms == 0) | (X.date.isnull()) | (X.date == '0')].index
-    return X.drop(mask), y.drop(mask)
-    # X.replace('nan', np.nan, inplace=True)
-    # X.dropna(inplace=True)
-    # mask = X[(X < 0).any(1) | (X.bedrooms == 0) | (X.bathrooms == 0)].index
-    # return X.drop(mask).reset_index(drop=True), \
-    #     y.drop(mask).reset_index(drop=True)
-
-
-def change_column_training(X: pd.DataFrame):
-    # delete id, long, lat
-    processed = X.drop([ID, LAT, LONG, DATE], axis=1)
-    # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
-    # processed[SQFT_ABOVE_PERCENTAGE] = X.apply(lambda a: a.sqft_above / float(a.sqft_living) if a.sqft_living != 0 else 0, axis=1)
-    # processed[SQFT_ABOVE_PERCENTAGE] = X.sqft_above / X.sqft_living
-    processed = pd.get_dummies(processed, prefix_sep='=', columns=[ZIPCODE])
-    # processed.date = processed.date.apply((lambda a: int(a[:8])))
-
-    return processed
-
-
-def preprocess_data_training(X: pd.DataFrame, y: pd.Series):
-    global after_preprocessing_columns, means, preprocess_train
-    processed_X, processed_y = change_rows(X, y)
-    processed_X = change_column_training(processed_X)
-    after_preprocessing_columns = processed_X.columns
-    preprocess_train = True
-    # means = pd.DataFrame(columns=processed_X.columns)
-    # means.loc[0] = np.mean(processed_X, axis=0)
-    means = pd.Series(data=np.mean(processed_X, axis=0), index=processed_X.columns)
-    return processed_X.reset_index(drop=True), \
-        processed_y.reset_index(drop=True)
-
-
-def preprocess_data_testing(X: pd.DataFrame):
-    if not preprocess_train:
-        print("you have to preprocess the train set before preprocessing the test set")
-        exit(1)
-
-    processed = X.drop([ID, LAT, LONG, DATE], axis=1)
-
-    # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
-
-    # mask_date = processed.date[(processed.date == '0') | (processed.date.isnull())].index
-    # not_mask_date = processed.date[(processed.date != '0') & (processed.date.notnull())].index
-    # processed.loc[mask_date, 'date'] = 0
-    # processed.loc[not_mask_date, 'date'] = processed.date
+def change_columns(X: pd.DataFrame):
     def date_change_func(a):
-        if type(a) == str:
+        if type(a) == str and len(a) >= 8:
             return int(a[:8])
-        elif a == '0':
-            return 0
-        else:
-            return means["date"]
+        return np.nan
 
-    # processed.date = processed.date.apply(date_change_func)
+    processed = X.drop([ID, LAT, LONG], axis=1)
 
-    # processed[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(processed.shape[0]))
-    # processed.loc[(processed.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = processed.sqft_above / processed.sqft_living
+    processed.loc[:, 'date'] = processed.date.apply(date_change_func)
+
+    # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
+
+    # todo understand why not working
+    # mask_date = processed[(processed.date == '0') | (processed.date.isnull())].index
+    # processed.loc[mask_date, 'date'] = 0
+    # processed.loc[processed.drop(mask_date).index, 'date'] = processed.date.apply((lambda a: int(a[:8])))
+
+    processed[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(processed.shape[0]))
+    processed.loc[(processed.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = processed.sqft_above / processed.sqft_living
 
     processed = pd.get_dummies(processed, prefix_sep='=', columns=["zipcode"])
     processed = processed.reindex(columns=after_preprocessing_columns, fill_value=0)
-
-    for column in processed:
-        processed.loc[processed[column].isnull(), column] = means[column]
     # processed = processed.fillna(0)
     return processed.reset_index(drop=True)
+
+
+def make_wrong_vals_nan(X: pd.DataFrame):
+    X.replace('nan', np.nan, inplace=True)
+    X[X < 0] = np.nan
+    X.loc[X.bedrooms == 0, 'bedrooms'] = np.nan
+    X.loc[X.bathrooms == 0, 'bathrooms'] = np.nan
+    X.loc[(X.sqft_living == 0) | (X.sqft_above > X.sqft_living) |
+          (X.sqft_lot < X.sqft_living), 'sqft_living'] = np.nan
+    X.loc[(X.sqft_lot == 0) | (X.sqft_lot < X.sqft_living), 'sqft_lot'] = \
+        np.nan
+    X.loc[X.floors == 0, 'floors'] = np.nan
+    X.loc[(X.waterfront != 0) & (X.waterfront != 1), 'waterfront'] = np.nan
+    X.loc[X.view > 4, 'view'] = np.nan
+    X.loc[(X.condition < 1) | (X.condition > 5), 'condition'] = np.nan
+    X.loc[(X.grade < 1) | (X.grade > 13), 'grade'] = np.nan
+    X.loc[X.sqft_above > X.sqft_living, 'sqft_above'] = np.nan
+    X.loc[X.yr_renovated > X.yr_built, ['yr_built', 'yr_renovated']] = np.nan
+    X.loc[X.sqft_living15 > X.sqft_lot15, ['sqft_living15', 'sqft_lot15']] = np.nan
+    return X
+
+
+def change_rows_train(X: pd.DataFrame, y: pd.Series):
+    mask = X[X.isnull().any(1)].index
+    X = X.drop(mask).reset_index(drop=True)
+    y = y.drop(mask).reset_index(drop=True)
+    return X, y
+
+
+def change_rows_test(X: pd.DataFrame):
+    for column in X:
+        X.loc[X[column].isnull(), column] = means[column]
+    return X
 
 
 def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
@@ -113,10 +105,22 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     Post-processed design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
+    global after_preprocessing_columns, means, preprocess_train
+    X = change_columns(X)
+    X = make_wrong_vals_nan(X)
     if y is not None:
-        return preprocess_data_training(X, y)
+        after_preprocessing_columns = X.columns
+        preprocess_train = True
+        means = pd.Series(data=np.mean(X, axis=0), index=X.columns)
+        X, y = change_rows_train(X, y)
+        return X.reset_index(drop=True), y.reset_index(drop=True)
     else:
-        return preprocess_data_testing(X), None
+        if not preprocess_train:
+            print("you have to preprocess the train set before preprocessing the test set")
+            exit(1)
+        X = change_rows_test(X)
+        return X.reset_index(drop=True)
+
     # raise NotImplementedError()
 
 
@@ -137,11 +141,6 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    # def func(a):
-    #     return a.cov(y) / np.sqrt(a.var() * var_y)
-    #
-    # pearson = X.apply(func, axis=0)
-    # raise NotImplementedError()
     var_y = y.var()
     for column_name in X:
         column_vec = X[column_name]
@@ -150,27 +149,14 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
             continue
         pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
         title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
-        fig = px.scatter(x=column_vec, y=y, title=title)
-        fig.write_image(IMG_PATH + column_vec.name, format="png", engine='orca')
+        fig = px.scatter(x=column_vec, y=y, title=title, labels={"x": column_name, "y": "price"})
+        fig.write_image(IMG_PATH + column_vec.name + ".png", format="png", engine='orca')
         print(column_name)
 
 
-def date_change_func(a):
-    if a == '0':
-        return 0
-    elif type(a) == str:
-        return int(a[:8])
-    else:
-        exit(5)
-
-
 if __name__ == '__main__':
-    # todo should i use sqft_living15 and sqft_lot15
     # todo: ratio between neighbors and self?
-    # todo if the var is 0, i can throw the column
     # todo cancel rows with too big values
-    # todo can i assume my training test will be from this database? if there is no null zipcode can i count on it (for the training set)
-
     np.random.seed(0)
     df = pd.read_csv(CSV_PATH)
     mask = df[(df.price <= 0) | (df.price.isnull())].index
@@ -178,6 +164,8 @@ if __name__ == '__main__':
     df.replace('nan', np.nan, inplace=True)
 
     ########################### play ################################
+    # change_columns(df)
+    # make_wrong_vals_nan(df.drop('date', axis=1))
     # df.dropna(inplace=True)
     # df.date = df.date.apply(date_change_func)
     # df.drop([ID, LAT, LONG], axis=1, inplace=True)
@@ -199,14 +187,14 @@ if __name__ == '__main__':
     proportion = 0.75
     train_X, train_y, test_X, test_y = split_train_test(df.drop(df[[PRICE]], axis=1), df[PRICE], train_proportion=proportion)
 
-    # Question 2 - Preprocessing of housing prices dataset
+    # # Question 2 - Preprocessing of housing prices dataset
     processed_train_X, processed_train_y = preprocess_data(train_X, train_y)
     processed_train = pd.concat([processed_train_X, processed_train_y], axis=1)
-    processed_test = preprocess_data(test_X)[0]
+    processed_test = preprocess_data(test_X)
 
     # Question 3 - Feature evaluation with respect to response
 
-    # feature_evaluation(processed_train_X, processed_train_y)
+    feature_evaluation(processed_train_X, processed_train_y)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
