@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
+import os
 
 pio.templates.default = "simple_white"
 
@@ -22,7 +23,7 @@ DATE = "date"
 SQFT_BASEMENT = "sqft_basement"
 SQFT_LIVING15 = "sqft_living15"
 
-CSV_PATH = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
+DATASET = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
 IMG_PATH = "C:/Users/segge/source/repos/IML-Seggev/images/Ex2/houses/"
 
 after_preprocessing_columns = None
@@ -150,7 +151,7 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
         title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
         fig = px.scatter(x=column_vec, y=y, title=title, labels={"x": column_name, "y": "price"})
-        fig.write_image(IMG_PATH + column_vec.name + ".png", format="png", engine='orca')
+        fig.write_image(os.path.join(os.getcwd(), output_path, column_vec.name + ".png"), format="png", engine='orca')
         print(column_name)
 
 
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     # todo: ratio between neighbors and self?
     # todo cancel rows with too big values
     np.random.seed(0)
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(DATASET)
     mask = df[(df.price <= 0) | (df.price.isnull())].index
     df = df.drop(mask, axis=0).reset_index(drop=True)
     df.replace('nan', np.nan, inplace=True)
@@ -194,7 +195,7 @@ if __name__ == '__main__':
 
     # Question 3 - Feature evaluation with respect to response
 
-    feature_evaluation(processed_train_X, processed_train_y)
+    feature_evaluation(processed_train_X, processed_train_y, "..\\images\\Ex2\\houses")
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -205,7 +206,7 @@ if __name__ == '__main__':
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
     lr = LinearRegression()
     var_pred, mean_pred = [], []
-    percentages = np.arange(10, 101)
+    percentages = np.arange(10, 20)
     var_y = test_y.var()
     for p in percentages:
         predictions_per_p = []
@@ -222,5 +223,6 @@ if __name__ == '__main__':
                           go.Scatter(x=percentages, y=mean_pred - 2 * var_pred, fill=None, mode="lines", line=dict(color="lightgrey"), showlegend=False),
                           go.Scatter(x=percentages, y=mean_pred + 2 * var_pred, fill='tonexty', mode="lines", line=dict(color="lightgrey"), showlegend=False)],
                     layout=go.Layout(title="Loss as function of training set's size"))
-    fig.write_image(IMG_PATH + "last.png", format="png", engine='orca')
+    # fig.write_image(IMG_PATH + "last.png", format="png", engine='orca')
+    fig.show()
     print("finish :)")
