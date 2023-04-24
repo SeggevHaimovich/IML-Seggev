@@ -31,14 +31,12 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
 
     test_y : Series of shape (floor((1-train_proportion) * n_samples), )
         Responses of test samples
-
     """
-    # todo is it ok to use this method and not sample?
     X = X.reset_index(drop=True)
     y = y.reset_index(drop=True)
-    train_rows = np.random.choice(X.shape[0], int(np.ceil(train_proportion * X.shape[0])), replace=False)
-    train_X, train_y = X.iloc[train_rows], y.iloc[train_rows]
-    test_X, test_y = X.drop(train_rows), y.drop(train_rows)
+    mask = X.sample(n=int(np.ceil(train_proportion * X.shape[0])), replace=False).index
+    train_X, train_y = X.iloc[mask], y.iloc[mask]
+    test_X, test_y = X.drop(mask), y.drop(mask)
     return train_X.reset_index(drop=True), \
         train_y.reset_index(drop=True), \
         test_X.reset_index(drop=True), \

@@ -18,7 +18,8 @@ LAT = "lat"
 ID = "id"
 YR_RENOVATED = "yr_renovated"
 YR_BUILT = "yr_built"
-CSV_PATH = "house_prices.csv"
+CSV_PATH = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
+IMG_PATH = "C:/Users/segge/source/repos/IML-Seggev/images/Ex2/houses/"
 DATE = "date"
 
 after_preprocessing_columns = None
@@ -29,6 +30,11 @@ preprocess_train = False
 def change_rows(X: pd.DataFrame, y: pd.Series):
     mask = X[(X.bedrooms == 0) | (X.bathrooms == 0) | (X.date.isnull()) | (X.date == '0')].index
     return X.drop(mask), y.drop(mask)
+    # X.replace('nan', np.nan, inplace=True)
+    # X.dropna(inplace=True)
+    # mask = X[(X < 0).any(1) | (X.bedrooms == 0) | (X.bathrooms == 0)].index
+    # return X.drop(mask).reset_index(drop=True), \
+    #     y.drop(mask).reset_index(drop=True)
 
 
 def change_column_training(X: pd.DataFrame):
@@ -37,7 +43,6 @@ def change_column_training(X: pd.DataFrame):
     # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
     # processed[SQFT_ABOVE_PERCENTAGE] = X.apply(lambda a: a.sqft_above / float(a.sqft_living) if a.sqft_living != 0 else 0, axis=1)
     # processed[SQFT_ABOVE_PERCENTAGE] = X.sqft_above / X.sqft_living
-    processed.loc[:, 'zipcode'] = processed['zipcode'].astype(int)
     processed = pd.get_dummies(processed, prefix_sep='=', columns=[ZIPCODE])
     # processed.date = processed.date.apply((lambda a: int(a[:8])))
 
@@ -86,10 +91,9 @@ def preprocess_data_testing(X: pd.DataFrame):
     processed = pd.get_dummies(processed, prefix_sep='=', columns=["zipcode"])
     processed = processed.reindex(columns=after_preprocessing_columns, fill_value=0)
 
-    # todo fix this
     for column in processed:
         processed.loc[processed[column].isnull(), column] = means[column]
-    processed = processed.fillna(0)
+    # processed = processed.fillna(0)
     return processed.reset_index(drop=True)
 
 
@@ -147,8 +151,17 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
         title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
         fig = px.scatter(x=column_vec, y=y, title=title)
-        fig.write_image(f"C:/Users/segge/source/repos/IML_Exercises/Ex2/images/{column_vec.name}.png", format="png", engine='orca')
+        fig.write_image(IMG_PATH + column_vec.name, format="png", engine='orca')
         print(column_name)
+
+
+def date_change_func(a):
+    if a == '0':
+        return 0
+    elif type(a) == str:
+        return int(a[:8])
+    else:
+        exit(5)
 
 
 if __name__ == '__main__':
@@ -162,6 +175,24 @@ if __name__ == '__main__':
     df = pd.read_csv(CSV_PATH)
     mask = df[(df.price <= 0) | (df.price.isnull())].index
     df = df.drop(mask, axis=0).reset_index(drop=True)
+    df.replace('nan', np.nan, inplace=True)
+
+    ########################### play ################################
+    # df.dropna(inplace=True)
+    # df.date = df.date.apply(date_change_func)
+    # df.drop([ID, LAT, LONG], axis=1, inplace=True)
+    # # df = pd.get_dummies(df, prefix_sep='=', columns=[ZIPCODE])
+    # df["yr_renovated_new"] = df[[YR_BUILT, YR_RENOVATED]].max(axis=1)
+    # df[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(df.shape[0]))
+    # df.loc[(df.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = df.sqft_above / df.sqft_living
+    # var_price = df.price.var()
+    # for column_name in df.drop('price', axis=1):
+    #     column_vec = df[column_name]
+    #     var_column = column_vec.var()
+    #     if not var_column:
+    #         print(f"column {column_name} has no var")
+    #     pearson = column_vec.cov(df.price) / np.sqrt(var_column * var_price)
+    #     print(f"{column_name} - {pearson}")
 
     # checks:
     # Question 1 - split data into train and test sets
@@ -175,7 +206,7 @@ if __name__ == '__main__':
 
     # Question 3 - Feature evaluation with respect to response
 
-    feature_evaluation(processed_train_X, processed_train_y)
+    # feature_evaluation(processed_train_X, processed_train_y)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -187,6 +218,7 @@ if __name__ == '__main__':
     lr = LinearRegression()
     var_pred, mean_pred = [], []
     percentages = np.arange(10, 101)
+    var_y = test_y.var()
     for p in percentages:
         predictions_per_p = []
         for _ in range(10):
@@ -196,10 +228,11 @@ if __name__ == '__main__':
         var_pred.append(np.sqrt(np.var(predictions_per_p)))
         mean_pred.append(np.mean(predictions_per_p))
         print(p)
+        print(mean_pred[-1] / var_y)
     mean_pred, var_pred = np.array(mean_pred), np.array(var_pred)
     fig = go.Figure(data=[go.Scatter(x=percentages, y=mean_pred, mode="markers+lines", name="Mean Prediction", line=dict(dash="dash"), marker=dict(color="green", opacity=.7)),
                           go.Scatter(x=percentages, y=mean_pred - 2 * var_pred, fill=None, mode="lines", line=dict(color="lightgrey"), showlegend=False),
                           go.Scatter(x=percentages, y=mean_pred + 2 * var_pred, fill='tonexty', mode="lines", line=dict(color="lightgrey"), showlegend=False)],
                     layout=go.Layout(title="Loss as function of training set's size"))
-    fig.write_image("C:/Users/segge/source/repos/IML_Exercises/Ex2/images/last.png", format="png", engine='orca')
+    fig.write_image(IMG_PATH + "last.png", format="png", engine='orca')
     print("finish :)")
