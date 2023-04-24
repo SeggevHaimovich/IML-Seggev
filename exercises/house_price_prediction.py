@@ -32,14 +32,14 @@ preprocess_train = False
 
 
 def change_columns(X: pd.DataFrame):
-    def date_change_func(a):
-        if type(a) == str and len(a) >= 8:
-            return int(a[:8])
-        return np.nan
+    # def date_change_func(a):
+    #     if type(a) == str and len(a) >= 8:
+    #         return int(a[:8])
+    #     return np.nan
+    #
+    # X.loc[:, 'date'] = X.date.apply(date_change_func)
 
     processed = X.drop([ID, LAT, LONG], axis=1)
-
-    processed.loc[:, 'date'] = processed.date.apply(date_change_func)
 
     # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
 
@@ -52,9 +52,8 @@ def change_columns(X: pd.DataFrame):
     processed.loc[(processed.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = processed.sqft_above / processed.sqft_living
 
     processed = pd.get_dummies(processed, prefix_sep='=', columns=["zipcode"])
-    processed = processed.reindex(columns=after_preprocessing_columns, fill_value=0)
     # processed = processed.fillna(0)
-    return processed.reset_index(drop=True)
+    return processed
 
 
 def make_wrong_vals_nan(X: pd.DataFrame):
@@ -90,6 +89,17 @@ def change_rows_test(X: pd.DataFrame):
     return X
 
 
+def make_vals_numeric(X: pd.DataFrame):
+    def date_change_func(a):
+        if type(a) == str and len(a) >= 8:
+            return int(a[:8])
+        return np.nan
+
+    X.loc[:, 'date'] = X.date.apply(date_change_func)
+    return X.apply(pd.to_numeric, errors='coerce')
+    # return X
+
+
 def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     """
     preprocess data
@@ -107,6 +117,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     DataFrame or a Tuple[DataFrame, Series]
     """
     global after_preprocessing_columns, means, preprocess_train
+    X = make_vals_numeric(X)
     X = change_columns(X)
     X = make_wrong_vals_nan(X)
     if y is not None:
@@ -116,6 +127,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         X, y = change_rows_train(X, y)
         return X.reset_index(drop=True), y.reset_index(drop=True)
     else:
+        X = X.reindex(columns=after_preprocessing_columns, fill_value=0)
         if not preprocess_train:
             print("you have to preprocess the train set before preprocessing the test set")
             exit(1)
@@ -195,7 +207,7 @@ if __name__ == '__main__':
 
     # Question 3 - Feature evaluation with respect to response
 
-    feature_evaluation(processed_train_X, processed_train_y, "..\\images\\Ex2\\houses")
+    # feature_evaluation(processed_train_X, processed_train_y, "..\\images\\Ex2\\houses")
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -206,7 +218,7 @@ if __name__ == '__main__':
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
     lr = LinearRegression()
     var_pred, mean_pred = [], []
-    percentages = np.arange(10, 20)
+    percentages = np.arange(10, 101)
     var_y = test_y.var()
     for p in percentages:
         predictions_per_p = []
