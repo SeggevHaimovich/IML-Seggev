@@ -42,7 +42,7 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
     #     test_X.reset_index(drop=True), \
     #     test_y.reset_index(drop=True)
     mask = X.sample(n=int(np.ceil(train_proportion * X.shape[0])), replace=False).index
-    train_X, train_y = X.iloc[mask], y.iloc[mask]
+    train_X, train_y = X.loc[mask], y.loc[mask]
     test_X, test_y = X.drop(mask), y.drop(mask)
     return train_X, train_y, test_X, test_y
 

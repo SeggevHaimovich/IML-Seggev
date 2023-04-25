@@ -11,17 +11,29 @@ import os
 
 pio.templates.default = "simple_white"
 
-ZIPCODE = "zipcode"
+ZIP = "zipcode"
 PRICE = "price"
-SQFT_ABOVE_PERCENTAGE = "sqft_above_percentage"
+ABOVE_PER = "sqft_above_percentage"
 LONG = "long"
 LAT = "lat"
 ID = "id"
-YR_RENOVATED = "yr_renovated"
-YR_BUILT = "yr_built"
+RENOVATED = "yr_renovated"
+BUILT = "yr_built"
 DATE = "date"
-SQFT_BASEMENT = "sqft_basement"
-SQFT_LIVING15 = "sqft_living15"
+BASEMENT = "sqft_basement"
+LIVING15 = "sqft_living15"
+LIVING_PER = "sqft_living_percentage_15"
+LOT_PER = "sqft_lot_percentage_15"
+FLOORS = 'floors'
+WATERFRONT = 'waterfront'
+COND = 'condition'
+GRADE = 'grade'
+LIVING = 'sqft_living'
+LOT = 'sqft_lot'
+ABOVE = 'sqft_above'
+BEDROOMS = 'bedrooms'
+BATH = 'bathrooms'
+LOT15 = 'sqft_lot15'
 
 DATASET = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
 IMG_PATH = "C:/Users/segge/source/repos/IML-Seggev/images/Ex2/houses/"
@@ -32,51 +44,90 @@ preprocess_train = False
 
 
 def change_columns(X: pd.DataFrame):
-    # def date_change_func(a):
-    #     if type(a) == str and len(a) >= 8:
-    #         return int(a[:8])
-    #     return np.nan
-    #
-    # X.loc[:, 'date'] = X.date.apply(date_change_func)
+    """
+    changing the columns of the training and the test sets to be better for
+    fitting our model
+
+    Parameters
+    ----------
+    X : DataFrame of shape (n_samples, n_features)
+        Design matrix of regression problem
+
+    Returns
+    -------
+    Dataframe with relevant columns for studying the price of the houses
+    """
 
     processed = X.drop([ID, LAT, LONG], axis=1)
 
     # processed[YR_RENOVATED] = X[[YR_BUILT, YR_RENOVATED]].max(axis=1)
 
-    # todo understand why not working
-    # mask_date = processed[(processed.date == '0') | (processed.date.isnull())].index
-    # processed.loc[mask_date, 'date'] = 0
-    # processed.loc[processed.drop(mask_date).index, 'date'] = processed.date.apply((lambda a: int(a[:8])))
+    processed[ABOVE_PER] = pd.Series(np.zeros(processed.shape[0]))
+    processed.loc[(processed.sqft_living > 0), ABOVE_PER] = \
+        processed.sqft_above / processed.sqft_living
 
-    processed[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(processed.shape[0]))
-    processed.loc[(processed.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = processed.sqft_above / processed.sqft_living
+    processed[LIVING_PER] = pd.Series(np.zeros(processed.shape[0]))
+    processed.loc[(processed.sqft_living15 > 0), LIVING_PER] = \
+        processed.sqft_living / processed.sqft_living15
 
-    processed = pd.get_dummies(processed, prefix_sep='=', columns=["zipcode"])
-    # processed = processed.fillna(0)
+    processed[LOT_PER] = pd.Series(np.zeros(processed.shape[0]))
+    processed.loc[(processed.sqft_lot15 > 0), LOT_PER] = \
+        processed.sqft_lot / processed.sqft_lot15
+
+    processed = pd.get_dummies(processed, prefix_sep='=', columns=[ZIP])
     return processed
 
 
 def make_wrong_vals_nan(X: pd.DataFrame):
+    """
+    Change all the spots with wrong values to be null values, so we can change
+    them later easily
+
+    Parameters
+    ----------
+    X : DataFrame of shape (n_samples, n_features)
+        Design matrix of regression problem
+
+    Returns
+    -------
+    Dataframe with null values instead of wrong ones
+    """
     X.replace('nan', np.nan, inplace=True)
-    X[X < 0] = np.nan
-    X.loc[X.bedrooms == 0, 'bedrooms'] = np.nan
-    X.loc[X.bathrooms == 0, 'bathrooms'] = np.nan
-    X.loc[(X.sqft_living == 0) | (X.sqft_above > X.sqft_living) |
-          (X.sqft_lot < X.sqft_living), 'sqft_living'] = np.nan
-    X.loc[(X.sqft_lot == 0) | (X.sqft_lot < X.sqft_living), 'sqft_lot'] = \
-        np.nan
-    X.loc[X.floors == 0, 'floors'] = np.nan
-    X.loc[(X.waterfront != 0) & (X.waterfront != 1), 'waterfront'] = np.nan
-    X.loc[X.view > 4, 'view'] = np.nan
-    X.loc[(X.condition < 1) | (X.condition > 5), 'condition'] = np.nan
-    X.loc[(X.grade < 1) | (X.grade > 13), 'grade'] = np.nan
-    X.loc[X.sqft_above > X.sqft_living, 'sqft_above'] = np.nan
-    X.loc[X.yr_renovated > X.yr_built, ['yr_built', 'yr_renovated']] = np.nan
-    X.loc[X.sqft_living15 > X.sqft_lot15, ['sqft_living15', 'sqft_lot15']] = np.nan
+    X[X < 0] = np.nan  # 2 lines
+    X.loc[X.floors == 0, FLOORS] = np.nan
+    X.loc[~X.waterfront.isin([0, 1]), WATERFRONT] = np.nan
+    X.loc[~X.view.isin(range(0, 5)), 'view'] = np.nan
+    X.loc[~X.condition.isin(range(1, 6)) | (X.condition > 5), COND] = np.nan
+    X.loc[~X.grade.isin(range(1, 14)), GRADE] = np.nan
+    X.loc[(X.sqft_living == 0) |
+          (X.sqft_above > X.sqft_living), LIVING] = np.nan
+    X.loc[(X.sqft_lot == 0), LOT] = np.nan
+    X.loc[X.sqft_above > X.sqft_living, ABOVE] = np.nan
+    X.loc[(X.yr_renovated != 0) & (X.yr_renovated < X.yr_built), [BUILT, RENOVATED]] = np.nan
+    X.loc[X.bedrooms == 0, BEDROOMS] = np.nan
+    X.loc[X.bathrooms == 0, BATH] = np.nan
+    X.loc[X.sqft_living15 == 0, LIVING15] = np.nan
+    X.loc[X.sqft_lot15 == 0, LOT15] = np.nan
+
     return X
 
 
 def change_rows_train(X: pd.DataFrame, y: pd.Series):
+    """
+    delete all the lines that contains null values in the training matrix
+
+    Parameters
+    ----------
+    X : DataFrame of shape (n_samples, n_features)
+        Design matrix of regression problem
+
+    y : array-like of shape (n_samples, )
+        Response vector corresponding given samples
+
+    Returns
+    -------
+    Dataframe and it's matching price vector without null values
+    """
     mask = X[X.isnull().any(1)].index
     X = X.drop(mask).reset_index(drop=True)
     y = y.drop(mask).reset_index(drop=True)
@@ -84,18 +135,44 @@ def change_rows_train(X: pd.DataFrame, y: pd.Series):
 
 
 def change_rows_test(X: pd.DataFrame):
+    """
+    Converts the null values in the test matrix to the mean values of the training set
+
+    Parameters
+    ----------
+    X : DataFrame of shape (n_samples, n_features)
+        Design matrix of regression problem
+
+
+    Returns
+    -------
+    Dataframe without null values
+    """
     for column in X:
         X.loc[X[column].isnull(), column] = means[column]
     return X
 
 
 def make_vals_numeric(X: pd.DataFrame):
+    """
+    changing the type of the values in the dataframe to numeric values
+    Parameters
+    ----------
+    X : DataFrame of shape (n_samples, n_features)
+        Design matrix of regression problem
+
+    Returns
+    -------
+    numeric Dataframe
+    """
+
     def date_change_func(a):
         if type(a) == str and len(a) >= 8:
             return int(a[:8])
         return np.nan
 
     X.loc[:, 'date'] = X.date.apply(date_change_func)
+
     return X.apply(pd.to_numeric, errors='coerce')
     # return X
 
@@ -121,20 +198,18 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X = change_columns(X)
     X = make_wrong_vals_nan(X)
     if y is not None:
+        X, y = change_rows_train(X, y)
         after_preprocessing_columns = X.columns
         preprocess_train = True
         means = pd.Series(data=np.mean(X, axis=0), index=X.columns)
-        X, y = change_rows_train(X, y)
         return X.reset_index(drop=True), y.reset_index(drop=True)
     else:
-        X = X.reindex(columns=after_preprocessing_columns, fill_value=0)
         if not preprocess_train:
             print("you have to preprocess the train set before preprocessing the test set")
             exit(1)
+        X = X.reindex(columns=after_preprocessing_columns, fill_value=0)
         X = change_rows_test(X)
         return X.reset_index(drop=True)
-
-    # raise NotImplementedError()
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -162,15 +237,13 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
             continue
         pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
         title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
-        fig = px.scatter(x=column_vec, y=y, title=title, labels={"x": column_name, "y": "price"})
+        fig = px.scatter(x=column_vec, y=y, title=title, labels={"x": column_name, "y": PRICE})
         fig.write_image(os.path.join(os.getcwd(), output_path, column_vec.name + ".png"), format="png", engine='orca')
         print(column_name)
 
 
 if __name__ == '__main__':
-    # todo: ratio between neighbors and self?
-    # todo cancel rows with too big values
-    np.random.seed(0)
+    # np.random.seed(0)
     df = pd.read_csv(DATASET)
     mask = df[(df.price <= 0) | (df.price.isnull())].index
     df = df.drop(mask, axis=0).reset_index(drop=True)
