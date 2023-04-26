@@ -80,7 +80,8 @@ class PolynomialFitting(BaseEstimator):
 
     def __transform(self, X: np.ndarray) -> np.ndarray:
         """
-        Transform given input according to the univariate polynomial transformation
+        Transform given input according to the univariate polynomial
+        transformation
 
         Parameters
         ----------

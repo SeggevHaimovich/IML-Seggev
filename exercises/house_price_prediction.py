@@ -35,12 +35,13 @@ BEDROOMS = 'bedrooms'
 BATH = 'bathrooms'
 LOT15 = 'sqft_lot15'
 
-DATASET = "C:/Users/segge/source/repos/IML-Seggev/datasets/house_prices.csv"
-IMG_PATH = "C:/Users/segge/source/repos/IML-Seggev/images/Ex2/houses/"
+DATASET = os.path.join(os.getcwd(), "..\\datasets\\house_prices.csv")
+IMG_PATH = os.path.join(os.getcwd(), "..\\images\\Ex2\\Houses")
 
 after_preprocessing_columns = None
 means = None
 preprocess_train = False
+ZERO_DATE = pd.to_datetime("2014-01-01", format="%Y-%m-%d")
 
 
 def change_columns(X: pd.DataFrame):
@@ -103,7 +104,8 @@ def make_wrong_vals_nan(X: pd.DataFrame):
           (X.sqft_above > X.sqft_living), LIVING] = np.nan
     X.loc[(X.sqft_lot == 0), LOT] = np.nan
     X.loc[X.sqft_above > X.sqft_living, ABOVE] = np.nan
-    X.loc[(X.yr_renovated != 0) & (X.yr_renovated < X.yr_built), [BUILT, RENOVATED]] = np.nan
+    X.loc[(X.yr_renovated != 0) & (X.yr_renovated < X.yr_built), [BUILT,
+                                                                  RENOVATED]] = np.nan
     X.loc[X.bedrooms == 0, BEDROOMS] = np.nan
     X.loc[X.bathrooms == 0, BATH] = np.nan
     X.loc[X.sqft_living15 == 0, LIVING15] = np.nan
@@ -136,7 +138,8 @@ def change_rows_train(X: pd.DataFrame, y: pd.Series):
 
 def change_rows_test(X: pd.DataFrame):
     """
-    Converts the null values in the test matrix to the mean values of the training set
+    Converts the null values in the test matrix to the mean values of the
+    training set
 
     Parameters
     ----------
@@ -168,13 +171,15 @@ def make_vals_numeric(X: pd.DataFrame):
 
     def date_change_func(a):
         if type(a) == str and len(a) >= 8:
-            return int(a[:8])
+            return a[:8]
         return np.nan
 
-    X.loc[:, 'date'] = X.date.apply(date_change_func)
+    X.loc[:, DATE] = X.date.apply(date_change_func)
+    X.loc[:, DATE] = X.date.apply(
+        lambda a: (pd.to_datetime(a, format="%Y%m%d") - ZERO_DATE).days
+        if type(a) == str else a)
 
     return X.apply(pd.to_numeric, errors='coerce')
-    # return X
 
 
 def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
@@ -190,7 +195,8 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
 
     Returns
     -------
-    Post-processed design matrix and response vector (prices) - either as a single
+    Post-processed design matrix and response vector (prices) - either as a
+    single
     DataFrame or a Tuple[DataFrame, Series]
     """
     global after_preprocessing_columns, means, preprocess_train
@@ -205,14 +211,16 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         return X.reset_index(drop=True), y.reset_index(drop=True)
     else:
         if not preprocess_train:
-            print("you have to preprocess the train set before preprocessing the test set")
+            print("you have to preprocess the train set before preprocessing "
+                  "the test set")
             exit(1)
         X = X.reindex(columns=after_preprocessing_columns, fill_value=0)
         X = change_rows_test(X)
         return X.reset_index(drop=True)
 
 
-def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
+def feature_evaluation(X: pd.DataFrame, y: pd.Series,
+                       output_path: str = ".") -> NoReturn:
     """
     Create scatter plot between each feature and the response.
         - Plot title specifies feature name
@@ -236,42 +244,29 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         if not var_column:
             continue
         pearson = column_vec.cov(y) / np.sqrt(var_column * var_y)
-        title = f"Relation between {column_vec.name} and {y.name}<br>the Pearson Correlation is {pearson}"
-        fig = px.scatter(x=column_vec, y=y, title=title, labels={"x": column_name, "y": PRICE})
-        fig.write_image(os.path.join(os.getcwd(), output_path, column_vec.name + ".png"), format="png", engine='orca')
+        title = f"Relation between {column_vec.name} and " \
+                f"{y.name}<br>the Pearson Correlation is {pearson}"
+        fig = px.scatter(x=column_vec, y=y, title=title,
+                         labels={"x": column_name, "y": PRICE})
+        fig.write_image(os.path.join(output_path, column_vec.name + ".png"),
+                        format="png", engine='orca')
         print(column_name)
 
 
 if __name__ == '__main__':
-    # np.random.seed(0)
+    np.random.seed(0)
     df = pd.read_csv(DATASET)
-    mask = df[(df.price <= 0) | (df.price.isnull())].index
-    df = df.drop(mask, axis=0).reset_index(drop=True)
     df.replace('nan', np.nan, inplace=True)
 
-    ########################### play ################################
-    # change_columns(df)
-    # make_wrong_vals_nan(df.drop('date', axis=1))
-    # df.dropna(inplace=True)
-    # df.date = df.date.apply(date_change_func)
-    # df.drop([ID, LAT, LONG], axis=1, inplace=True)
-    # # df = pd.get_dummies(df, prefix_sep='=', columns=[ZIPCODE])
-    # df["yr_renovated_new"] = df[[YR_BUILT, YR_RENOVATED]].max(axis=1)
-    # df[SQFT_ABOVE_PERCENTAGE] = pd.Series(np.zeros(df.shape[0]))
-    # df.loc[(df.sqft_living > 0), SQFT_ABOVE_PERCENTAGE] = df.sqft_above / df.sqft_living
-    # var_price = df.price.var()
-    # for column_name in df.drop('price', axis=1):
-    #     column_vec = df[column_name]
-    #     var_column = column_vec.var()
-    #     if not var_column:
-    #         print(f"column {column_name} has no var")
-    #     pearson = column_vec.cov(df.price) / np.sqrt(var_column * var_price)
-    #     print(f"{column_name} - {pearson}")
+    # deleting invalid price rows
+    mask = df[(df.price <= 0) | (df.price.isnull())].index
+    df = df.drop(mask, axis=0).reset_index(drop=True)
 
-    # checks:
     # Question 1 - split data into train and test sets
     proportion = 0.75
-    train_X, train_y, test_X, test_y = split_train_test(df.drop(df[[PRICE]], axis=1), df[PRICE], train_proportion=proportion)
+    train_X, train_y, test_X, test_y = \
+        split_train_test(df.drop(df[[PRICE]], axis=1),
+                         df[PRICE], train_proportion=proportion)
 
     # # Question 2 - Preprocessing of housing prices dataset
     processed_train_X, processed_train_y = preprocess_data(train_X, train_y)
@@ -280,15 +275,19 @@ if __name__ == '__main__':
 
     # Question 3 - Feature evaluation with respect to response
 
-    # feature_evaluation(processed_train_X, processed_train_y, "..\\images\\Ex2\\houses")
+    feature_evaluation(processed_train_X, processed_train_y,
+                       IMG_PATH)
 
-    # Question 4 - Fit model over increasing percentages of the overall training data
-    # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
+    # Question 4 - Fit model over increasing percentages of the overall
+    # training data
+    # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10
+    # times:
     #   1) Sample p% of the overall training data
     #   2) Fit linear model (including intercept) over sampled set
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
-    # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
+    # Then plot average loss as function of training size with error ribbon of
+    # size (mean-2*std, mean+2*std)
     lr = LinearRegression()
     var_pred, mean_pred = [], []
     percentages = np.arange(10, 101)
@@ -297,17 +296,26 @@ if __name__ == '__main__':
         predictions_per_p = []
         for _ in range(10):
             picked = processed_train.sample(frac=p / float(100), replace=False)
-            lr._fit(picked.drop(PRICE, axis=1).to_numpy(), picked.price.to_numpy())
-            predictions_per_p.append(lr._loss(processed_test.to_numpy(), test_y.to_numpy()))
+            lr.fit(picked.drop(PRICE, axis=1).to_numpy(),
+                   picked.price.to_numpy())
+            predictions_per_p.append(lr.loss(processed_test.to_numpy(),
+                                             test_y.to_numpy()))
         var_pred.append(np.sqrt(np.var(predictions_per_p)))
         mean_pred.append(np.mean(predictions_per_p))
         print(p)
         print(mean_pred[-1] / var_y)
     mean_pred, var_pred = np.array(mean_pred), np.array(var_pred)
-    fig = go.Figure(data=[go.Scatter(x=percentages, y=mean_pred, mode="markers+lines", name="Mean Prediction", line=dict(dash="dash"), marker=dict(color="green", opacity=.7)),
-                          go.Scatter(x=percentages, y=mean_pred - 2 * var_pred, fill=None, mode="lines", line=dict(color="lightgrey"), showlegend=False),
-                          go.Scatter(x=percentages, y=mean_pred + 2 * var_pred, fill='tonexty', mode="lines", line=dict(color="lightgrey"), showlegend=False)],
-                    layout=go.Layout(title="Loss as function of training set's size"))
-    # fig.write_image(IMG_PATH + "last.png", format="png", engine='orca')
-    fig.show()
-    print("finish :)")
+    fig = go.Figure(
+        data=[go.Scatter(x=percentages, y=mean_pred, mode="markers+lines",
+                         name="Mean Prediction", line=dict(dash="dash"),
+                         marker=dict(color="green", opacity=.7)),
+              go.Scatter(x=percentages, y=mean_pred - 2 * var_pred, fill=None,
+                         mode="lines", line=dict(color="lightgrey"),
+                         showlegend=False),
+              go.Scatter(x=percentages, y=mean_pred + 2 * var_pred,
+                         fill='tonexty', mode="lines",
+                         line=dict(color="lightgrey"), showlegend=False)],
+        layout=go.Layout(title="Loss as function of training set's size",
+                         xaxis_title="% of Train set", yaxis_title="MSE"))
+    fig.write_image(os.path.join(IMG_PATH, "Losses_graph.png"), format="png",
+                    engine='orca')
