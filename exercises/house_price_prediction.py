@@ -36,7 +36,7 @@ BATH = 'bathrooms'
 LOT15 = 'sqft_lot15'
 
 DATASET = os.path.join(os.getcwd(), "..\\datasets\\house_prices.csv")
-IMG_PATH = os.path.join(os.getcwd(), "..\\images\\Ex2\\Houses")
+# IMG_PATH = os.path.join(os.getcwd(), "..\\images\\Ex2\\Houses")
 
 after_preprocessing_columns = None
 means = None
@@ -275,8 +275,7 @@ if __name__ == '__main__':
 
     # Question 3 - Feature evaluation with respect to response
 
-    feature_evaluation(processed_train_X, processed_train_y,
-                       IMG_PATH)
+    feature_evaluation(processed_train_X, processed_train_y)
 
     # Question 4 - Fit model over increasing percentages of the overall
     # training data
@@ -317,5 +316,4 @@ if __name__ == '__main__':
                          line=dict(color="lightgrey"), showlegend=False)],
         layout=go.Layout(title="Loss as function of training set's size",
                          xaxis_title="% of Train set", yaxis_title="MSE"))
-    fig.write_image(os.path.join(IMG_PATH, "Losses_graph.png"), format="png",
-                    engine='orca')
+    fig.write_image("Losses_graph.png", format="png", engine='orca')
