@@ -94,7 +94,7 @@ def make_wrong_vals_nan(X: pd.DataFrame):
     Dataframe with null values instead of wrong ones
     """
     X.replace('nan', np.nan, inplace=True)
-    X[X < 0] = np.nan  # 2 lines
+    X[X < 0] = np.nan
     X.loc[X.floors == 0, FLOORS] = np.nan
     X.loc[~X.waterfront.isin([0, 1]), WATERFRONT] = np.nan
     X.loc[~X.view.isin(range(0, 5)), 'view'] = np.nan
@@ -250,7 +250,7 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series,
                          labels={"x": column_name, "y": PRICE})
         fig.write_image(os.path.join(output_path, column_vec.name + ".png"),
                         format="png", engine='orca')
-        print(column_name)
+        # print(column_name)  # to show the process working
 
 
 if __name__ == '__main__':
@@ -302,8 +302,8 @@ if __name__ == '__main__':
                                              test_y.to_numpy()))
         var_pred.append(np.sqrt(np.var(predictions_per_p)))
         mean_pred.append(np.mean(predictions_per_p))
-        print(p)
-        print(mean_pred[-1] / var_y)
+        # print(p)
+        # print(mean_pred[-1] / var_y)  # used to check if my loss is good
     mean_pred, var_pred = np.array(mean_pred), np.array(var_pred)
     fig = go.Figure(
         data=[go.Scatter(x=percentages, y=mean_pred, mode="markers+lines",
