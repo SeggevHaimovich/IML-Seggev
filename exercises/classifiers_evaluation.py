@@ -1,9 +1,14 @@
+import numpy as np
+
 from IMLearn.learners.classifiers import Perceptron, LDA, GaussianNaiveBayes
 from typing import Tuple
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from math import atan2, pi
+import os
+
+IMG_PATH = "..\\images\\Ex3\\perceptron"
 
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -36,16 +41,35 @@ def run_perceptron():
     Create a line plot that shows the perceptron algorithm's training loss values (y-axis)
     as a function of the training iterations (x-axis).
     """
-    for n, f in [("Linearly Separable", "linearly_separable.npy"), ("Linearly Inseparable", "linearly_inseparable.npy")]:
+    for n, f in [("Linearly Separable", "linearly_separable.npy"),
+                 ("Linearly Inseparable", "linearly_inseparable.npy")]:
         # Load dataset
-        raise NotImplementedError()
-
+        data = np.load(os.path.join(os.getcwd(), "..\\datasets", f))
+        # df = pd.DataFrame(data, columns=['x1', 'x2', 'y'])
+        # X, results = df.drop('y'), df['y']
+        X = data[:, :2]
+        Y = data[:, 2]
         # Fit Perceptron and record loss in each fit iteration
         losses = []
-        raise NotImplementedError()
+
+        def foo(fit: Perceptron, _: np.ndarray, __: int):
+            losses.append(fit.loss(X, Y))
+
+        per = Perceptron(callback=foo)
+        per.fit(X, Y)
 
         # Plot figure of loss as function of fitting iteration
-        raise NotImplementedError()
+        fig = go.Figure(
+            data=go.Scatter(x=np.arange(len(losses)), y=losses,
+                            mode="lines"),
+            layout=go.Layout(xaxis=dict(title="number of iterations"),
+                             yaxis=dict(title="loss"),
+                             title=f"loss as function of number of iterations"
+                                   f"<br>{n} case")
+        )
+        fig.write_image(
+            os.path.join(IMG_PATH, f"loss-iterations_{n}_case.png"),
+            format="png", engine="orca")
 
 
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):
@@ -65,12 +89,14 @@ def get_ellipse(mu: np.ndarray, cov: np.ndarray):
         scatter: A plotly trace object of the ellipse
     """
     l1, l2 = tuple(np.linalg.eigvalsh(cov)[::-1])
-    theta = atan2(l1 - cov[0, 0], cov[0, 1]) if cov[0, 1] != 0 else (np.pi / 2 if cov[0, 0] < cov[1, 1] else 0)
+    theta = atan2(l1 - cov[0, 0], cov[0, 1]) if cov[0, 1] != 0 else (
+        np.pi / 2 if cov[0, 0] < cov[1, 1] else 0)
     t = np.linspace(0, 2 * pi, 100)
     xs = (l1 * np.cos(theta) * np.cos(t)) - (l2 * np.sin(theta) * np.sin(t))
     ys = (l1 * np.sin(theta) * np.cos(t)) + (l2 * np.cos(theta) * np.sin(t))
 
-    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
+    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines",
+                      marker_color="black")
 
 
 def compare_gaussian_classifiers():
@@ -103,4 +129,4 @@ def compare_gaussian_classifiers():
 if __name__ == '__main__':
     np.random.seed(0)
     run_perceptron()
-    compare_gaussian_classifiers()
+    # compare_gaussian_classifiers()
