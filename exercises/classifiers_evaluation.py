@@ -47,15 +47,15 @@ def run_perceptron():
         data = np.load(os.path.join(os.getcwd(), "..\\datasets", f))
         # df = pd.DataFrame(data, columns=['x1', 'x2', 'y'])
         # X, results = df.drop('y'), df['y']
-        X = data[:, :2]
-        Y = data[:, 2]
+        X = data[:, :-1]
+        Y = data[:, -1]
         # Fit Perceptron and record loss in each fit iteration
         losses = []
 
-        def foo(fit: Perceptron, _: np.ndarray, __: int):
+        def record_losses(fit: Perceptron, _: np.ndarray, __: int):
             losses.append(fit.loss(X, Y))
 
-        per = Perceptron(callback=foo)
+        per = Perceptron(callback=record_losses)
         per.fit(X, Y)
 
         # Plot figure of loss as function of fitting iteration
@@ -128,5 +128,21 @@ def compare_gaussian_classifiers():
 
 if __name__ == '__main__':
     np.random.seed(0)
-    run_perceptron()
+    # run_perceptron()
     # compare_gaussian_classifiers()
+
+    # lda = LDA()
+    # x = np.array([[1, 2, 3, 4, 5], [2, 10, 5, 2, 7], [3, 5, 8, 13, 9],
+    #               [4, 2, 13, 4, 1]])
+    # y = np.array([12, 8, 12, 8])
+    # lda.fit(x, y)
+    # print(lda.predict(np.array([2, 10, 5, 2, 7])))
+    # print(lda.likelihood(np.array([[2, 10, 5, 4, 7]])))
+
+    qda = GaussianNaiveBayes()
+    x = np.array([[1, 2, 3, 4, 5, 8], [2, 10, 5, 2, 7, 2], [3, 5, 8, 13, 9, 5],
+                  [4, 2, 13, 4, 1, 3], [5, 7, 9, 1, 12, 1]])
+    y = np.array([12, 8, 12, 8, 8])
+    qda.fit(x, y)
+    # print(lda.predict(np.array([2, 10, 5, 2, 7])))
+    # print(lda.likelihood(np.array([[2, 10, 5, 4, 7]])))
