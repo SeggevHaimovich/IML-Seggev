@@ -60,8 +60,12 @@ class LDA(BaseEstimator):
         self.cov_ = np.zeros([X.shape[1], X.shape[1]])
 
         for i in range(len(df)):
-            normalized = (x_df.iloc[i, :] - mu_df.loc[df.iloc[i, -1]]).to_numpy()
+            normalized = (
+                    x_df.iloc[i, :] - mu_df.loc[df.iloc[i, -1]]).to_numpy()
             self.cov_ += np.outer(normalized, normalized)
+        self.cov_ /= X.shape[0]
+        self._cov_inv = np.linalg.inv(self.cov_)
+        bla = 5
 
         # X_norm = df.copy()
         # for c in self.classes_:
@@ -70,8 +74,6 @@ class LDA(BaseEstimator):
         #
         # for i in range(X_norm.shape[0]):
         #     self.cov_ += np.outer(X_norm[i], X_norm[i])
-
-        self._cov_inv = np.linalg.inv(self.cov_)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -87,24 +89,7 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        # mx = -np.inf
-        # index = -1
-        # for i in range(len(self.classes_)):
-        #     a = self._cov_inv @ self.mu_[i].T
-        #     b = np.log(self.pi_[i]) - 0.5 * (
-        #                 self.mu_[i] @ self._cov_inv @ self.mu_[i].T)
-        #     cur = a.T @ X + b
-        #     if cur > mx:
-        #         mx = cur
-        #         index = i
-        # return self.classes_[index]
-
-        # better way but more dangerous
-        a_T = self.mu_ @ self._cov_inv.T
-        b = np.log(self.pi_) - \
-            0.5 * ((self.mu_ * (self._cov_inv @ self.mu_.T).T).sum(-1))
-        vec = a_T @ X + b
-        return self.classes_[np.argmax(vec)]
+        return self.classes_[np.argmax(self.likelihood(X), 1)]
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -122,6 +107,7 @@ class LDA(BaseEstimator):
         """
         #  todo I have no idea if it is working, and this is with loop
         #   (i think i have to use loop)
+
         if not self.fitted_:
             raise ValueError(
                 "Estimator must first be fitted before calling `likelihood` function")
@@ -153,4 +139,4 @@ class LDA(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        return misclassification_error(self.predict(X), y)
+        return misclassification_error(y, self.predict(X))
