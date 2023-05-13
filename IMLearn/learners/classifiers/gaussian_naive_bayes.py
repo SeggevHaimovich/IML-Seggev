@@ -56,9 +56,8 @@ class GaussianNaiveBayes(BaseEstimator):
         X_norm_no_y = X_norm.drop('y', axis=1)
         X_norm_no_y = X_norm_no_y ** 2
         X_norm = pd.concat([X_norm_no_y, y_df], axis=1)
-        vars = X_norm.groupby(X_norm.y).mean().to_numpy()
-        nps = df.groupby(df.y)['y'].count().to_numpy()
-        self.vars_ = vars / (nps.reshape([nps.shape[0], -1]))
+        self.vars_ = X_norm.groupby(X_norm.y).mean().to_numpy()
+        bla = 5
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -74,18 +73,8 @@ class GaussianNaiveBayes(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        # mx = -np.inf
-        # index = -1
-        # psudo_inv = 1
-        # for i in range(len(self.classes_)):
-        #     a = self._cov_inv @ self.mu_[i].T
-        #     b = np.log(self.pi_[i]) - 0.5 * (
-        #                 self.mu_[i] @ self._cov_inv @ self.mu_[i].T)
-        #     cur = a.T @ X + b
-        #     if cur > mx:
-        #         mx = cur
-        #         index = i
-        # return self.classes_[index]
+        return self.classes_[np.argmax(self.likelihood(X), 1)]
+
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
         Calculate the likelihood of a given data over the estimated model
@@ -104,8 +93,22 @@ class GaussianNaiveBayes(BaseEstimator):
         if not self.fitted_:
             raise ValueError(
                 "Estimator must first be fitted before calling `likelihood` function")
+        temp1 = np.ones_like(self.vars_)
+        temp1[self.vars_ == 0] = 0
+        temp2 = self.vars_.copy()
+        temp2[temp2 == 0] = 1
+        vars_inv = temp1 / temp2
 
-        raise NotImplementedError()
+        like = np.zeros([X.shape[0], len(self.classes_)])
+        deter = self.vars_.prod(1)
+        for i in range(len(self.classes_)):
+            X_norm = X - self.mu_[i]
+            denominator = np.sqrt(((2 * np.pi) ** X.shape[1]) * deter[i])
+            numerator = np.exp(
+                -0.5 * (X_norm * (np.diag(vars_inv[i]) @ X_norm.T).T).sum(-1))
+            # (X_norm * (self._cov_inv @ X_norm.T).T).sum(-1))
+            like[:, i] = (numerator * self.pi_[i]) / denominator
+        return like
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -125,4 +128,4 @@ class GaussianNaiveBayes(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+        return misclassification_error(y, self.predict(X))
