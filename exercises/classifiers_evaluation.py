@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 from math import atan2, pi
 import os
 
-IMG_PATH = "..\\images\\Ex3"
+IMG_PATH = "."
 
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -68,8 +68,7 @@ def run_perceptron():
                                    f"<br>{n} case")
         )
         fig.write_image(
-            os.path.join(IMG_PATH, 'perceptron',
-                         f"loss-iterations_{n}_case.png"),
+            os.path.join(IMG_PATH, f"perceptron_loss-iterations_{n}_case.png"),
             format="png", engine="orca")
 
 
@@ -155,20 +154,12 @@ def compare_gaussian_classifiers():
             fig.add_traces([get_ellipse(naive.mu_[i], np.diag(naive.vars_[i])),
                             get_ellipse(lda.mu_[i], lda.cov_)],
                            rows=[1, 1], cols=[1, 2])
-        fig.write_image(os.path.join(IMG_PATH, 'LDA_Naive', f"{n}2.png"),
+        fig.write_image(os.path.join(IMG_PATH, f"LDA_Naive_{n}.png"),
                         format="png", engine="orca")
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     X, y = load_dataset("..\\datasets\\gaussian1.npy")
-    # run_perceptron()
+    run_perceptron()
     compare_gaussian_classifiers()
-
-    # lda = LDA()
-    # lda.fit(X, y)
-    # bla = lda.predict(np.array([[5, 3], [2, -1], [3, 2], [1, -1]]))
-
-    # qda = GaussianNaiveBayes()
-    # qda.fit(X, y)
-    # bla = qda.predict(np.array([[5, 3], [2, -1], [3, 2], [1, -1]]))
