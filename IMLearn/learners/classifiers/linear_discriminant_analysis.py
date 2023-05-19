@@ -56,24 +56,22 @@ class LDA(BaseEstimator):
         mu_df = df.groupby(df.y).mean()
         self.mu_ = mu_df.to_numpy()
 
-        #  todo: without loops
-        self.cov_ = np.zeros([X.shape[1], X.shape[1]])
+        ########### regular way ##############
+        # self.cov_ = np.zeros([X.shape[1], X.shape[1]])
+        # for i in range(len(df)):
+        #     normalized = (
+        #             x_df.iloc[i, :] - mu_df.loc[df.iloc[i, -1]]).to_numpy()
+        #     self.cov_ += np.outer(normalized, normalized)
+        # self.cov_ /= X.shape[0]
 
-        for i in range(len(df)):
-            normalized = (
-                    x_df.iloc[i, :] - mu_df.loc[df.iloc[i, -1]]).to_numpy()
-            self.cov_ += np.outer(normalized, normalized)
-        self.cov_ /= X.shape[0]
+        ########### cool einsum way ##########
+        X_norm = df.copy()
+        for c in self.classes_:
+            X_norm.loc[X_norm.y == c, :] -= mu_df.loc[c]
+        X_norm = X_norm.drop('y', axis=1).to_numpy()
+        self.cov_ = np.einsum('ij,ik->jk', X_norm, X_norm) / X.shape[0]
+
         self._cov_inv = np.linalg.inv(self.cov_)
-        bla = 5
-
-        # X_norm = df.copy()
-        # for c in self.classes_:
-        #     X_norm.loc[X_norm.y == c, :] -= mu_df.loc[c]
-        # X_norm = X_norm.drop('y', axis=1).to_numpy()
-        #
-        # for i in range(X_norm.shape[0]):
-        #     self.cov_ += np.outer(X_norm[i], X_norm[i])
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -105,8 +103,6 @@ class LDA(BaseEstimator):
         likelihoods : np.ndarray of shape (n_samples, n_classes)
             The likelihood for each sample under each of the classes
         """
-        #  todo I have no idea if it is working, and this is with loop
-        #   (i think i have to use loop)
 
         if not self.fitted_:
             raise ValueError(

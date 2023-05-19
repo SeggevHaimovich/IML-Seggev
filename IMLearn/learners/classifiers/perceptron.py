@@ -80,17 +80,20 @@ class Perceptron(BaseEstimator):
             X = np.c_[X, np.ones(X.shape[0])]
         self.coefs_ = np.zeros(X.shape[1])
         self.fitted_ = True
-        self.callback_(self, None, None)  # todo should i do this?
+        # Do I need to use callback right after initialize the vector?
+        # self.callback_(self, None, None)
         for _ in range(self.max_iter_):
             flag = False
             for i in range(X.shape[0]):
                 if y[i] * np.inner(X[i], self.coefs_) <= 0:
-                    self.coefs_ += y[i] * X[i]  # todo x_i and y+i is good?
+                    self.coefs_ += y[i] * X[i]
                     self.callback_(self, X[i], y[i])
                     flag = True
                     break
             if not flag:
                 break
+        # Do I need to add this 1 more callback because of the forum?
+        self.callback_(self, None, None)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -109,7 +112,7 @@ class Perceptron(BaseEstimator):
         if self.include_intercept_:
             X = np.c_[X, np.ones(X.shape[0])]
         answer = X @ self.coefs_
-        answer[answer == 0] = -1  # todo should i do this?
+        answer[answer == 0] = -1
         return np.sign(answer)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
