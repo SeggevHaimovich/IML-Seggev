@@ -57,7 +57,6 @@ class GaussianNaiveBayes(BaseEstimator):
         X_norm_no_y = X_norm_no_y ** 2
         X_norm = pd.concat([X_norm_no_y, y_df], axis=1)
         self.vars_ = X_norm.groupby(X_norm.y).mean().to_numpy()
-        bla = 5
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -106,7 +105,6 @@ class GaussianNaiveBayes(BaseEstimator):
             denominator = np.sqrt(((2 * np.pi) ** X.shape[1]) * deter[i])
             numerator = np.exp(
                 -0.5 * (X_norm * (np.diag(vars_inv[i]) @ X_norm.T).T).sum(-1))
-            # (X_norm * (self._cov_inv @ X_norm.T).T).sum(-1))
             like[:, i] = (numerator * self.pi_[i]) / denominator
         return like
 

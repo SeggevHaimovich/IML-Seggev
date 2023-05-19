@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 from math import atan2, pi
 import os
 
-IMG_PATH = "..\\images\\Ex3\\perceptron"
+IMG_PATH = "..\\images\\Ex3"
 
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -68,7 +68,8 @@ def run_perceptron():
                                    f"<br>{n} case")
         )
         fig.write_image(
-            os.path.join(IMG_PATH, f"loss-iterations_{n}_case.png"),
+            os.path.join(IMG_PATH, 'perceptron',
+                         f"loss-iterations_{n}_case.png"),
             format="png", engine="orca")
 
 
@@ -104,45 +105,70 @@ def compare_gaussian_classifiers():
     Fit both Gaussian Naive Bayes and LDA classifiers on both gaussians1 and gaussians2 datasets
     """
     for f in ["gaussian1.npy", "gaussian2.npy"]:
+        n = f[:-4]
         # Load dataset
-        raise NotImplementedError()
+        X, y = load_dataset(os.path.join(os.getcwd(), "..\\datasets", f))
 
         # Fit models and predict over training set
-        raise NotImplementedError()
+        lda = LDA()
+        lda.fit(X, y)
+        lda_predict = lda.predict(X)
+
+        naive = GaussianNaiveBayes()
+        naive.fit(X, y)
+        naive_predict = naive.predict(X)
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
         # on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
         # Create subplots
         from IMLearn.metrics import accuracy
-        raise NotImplementedError()
+        lda_accu = round(accuracy(y, lda_predict), 3)
+        naive_accu = round(accuracy(y, naive_predict), 3)
+        X_df = pd.DataFrame(X, columns=['x1', 'x2'])
+        fig = make_subplots(rows=1, cols=2,
+                            subplot_titles=(
+                                f"Gaussian Naive Bayes<br>accuracy: "
+                                f"{naive_accu}",
+                                f"Linear Discriminant Analysis<br>accuracy: "
+                                f"{lda_accu}"))
+        fig.update_layout(title_text=f"<B>DataSet: {n}</b>",
+                          margin=dict(t=100), width=1000, height=600,
+                          showlegend=False)
 
         # Add traces for data-points setting symbols and colors
-        raise NotImplementedError()
+        fig.add_traces([go.Scatter(x=X_df.x1, y=X_df.x2, mode='markers',
+                                   marker=dict(color=naive_predict, symbol=y)),
+                        go.Scatter(x=X_df.x1, y=X_df.x2, mode='markers',
+                                   marker=dict(color=lda_predict, symbol=y))
+                        ], rows=[1, 1], cols=[1, 2])
 
         # Add `X` dots specifying fitted Gaussians' means
-        raise NotImplementedError()
+        fig.add_traces(
+            [go.Scatter(x=naive.mu_[:, 0], y=naive.mu_[:, 1], mode='markers',
+                        marker=dict(color='black', symbol='x', size=10)),
+             go.Scatter(x=lda.mu_[:, 0], y=lda.mu_[:, 1], mode='markers',
+                        marker=dict(color='black', symbol='x', size=10))
+             ], rows=[1, 1], cols=[1, 2])
 
         # Add ellipses depicting the covariances of the fitted Gaussians
-        raise NotImplementedError()
+        for i in range(len(lda.mu_)):
+            fig.add_traces([get_ellipse(naive.mu_[i], np.diag(naive.vars_[i])),
+                            get_ellipse(lda.mu_[i], lda.cov_)],
+                           rows=[1, 1], cols=[1, 2])
+        fig.write_image(os.path.join(IMG_PATH, 'LDA_Naive', f"{n}2.png"),
+                        format="png", engine="orca")
 
 
 if __name__ == '__main__':
     np.random.seed(0)
+    X, y = load_dataset("..\\datasets\\gaussian1.npy")
     # run_perceptron()
-    # compare_gaussian_classifiers()
+    compare_gaussian_classifiers()
 
     # lda = LDA()
-    # x = np.array([[1, 2, 3, 4, 5], [2, 10, 5, 2, 7], [3, 5, 8, 13, 9],
-    #               [4, 2, 13, 4, 1]])
-    # y = np.array([12, 8, 12, 8])
-    # lda.fit(x, y)
-    # print(lda.predict(np.array([2, 10, 5, 2, 7])))
-    # print(lda.likelihood(np.array([[2, 10, 5, 4, 7]])))
+    # lda.fit(X, y)
+    # bla = lda.predict(np.array([[5, 3], [2, -1], [3, 2], [1, -1]]))
 
-    qda = GaussianNaiveBayes()
-    x = np.array([[1, 2, 3, 4, 5, 8], [2, 10, 5, 2, 7, 2], [3, 5, 8, 13, 9, 5],
-                  [4, 2, 13, 4, 1, 3], [5, 7, 9, 1, 12, 1]])
-    y = np.array([12, 8, 12, 8, 8])
-    qda.fit(x, y)
-    # print(lda.predict(np.array([2, 10, 5, 2, 7])))
-    # print(lda.likelihood(np.array([[2, 10, 5, 4, 7]])))
+    # qda = GaussianNaiveBayes()
+    # qda.fit(X, y)
+    # bla = qda.predict(np.array([[5, 3], [2, -1], [3, 2], [1, -1]]))
