@@ -62,14 +62,15 @@ class LDA(BaseEstimator):
         #     normalized = (
         #             x_df.iloc[i, :] - mu_df.loc[df.iloc[i, -1]]).to_numpy()
         #     self.cov_ += np.outer(normalized, normalized)
-        # self.cov_ /= X.shape[0]
+        # self.cov_ /= (X.shape[0] - len(self.classes_)
 
         ########### cool einsum way ##########
         X_norm = df.copy()
         for c in self.classes_:
             X_norm.loc[X_norm.y == c, :] -= mu_df.loc[c]
         X_norm = X_norm.drop('y', axis=1).to_numpy()
-        self.cov_ = np.einsum('ij,ik->jk', X_norm, X_norm) / X.shape[0]
+        self.cov_ = np.einsum('ij,ik->jk', X_norm, X_norm) / (
+                    X.shape[0] - len(self.classes_))
 
         self._cov_inv = np.linalg.inv(self.cov_)
 

@@ -77,7 +77,7 @@ class Perceptron(BaseEstimator):
         Fits model with or without an intercept depending on value of `self.fit_intercept_`
         """
         if self.include_intercept_:
-            X = np.c_[X, np.ones(X.shape[0])]
+            X = np.c_[np.ones(X.shape[0]), X]
         self.coefs_ = np.zeros(X.shape[1])
         self.fitted_ = True
         # Do I need to use callback right after initialize the vector?
@@ -86,7 +86,7 @@ class Perceptron(BaseEstimator):
             flag = False
             for i in range(X.shape[0]):
                 if y[i] * np.inner(X[i], self.coefs_) <= 0:
-                    self.coefs_ += y[i] * X[i]
+                    self.coefs_ += (y[i] * X[i])
                     self.callback_(self, X[i], y[i])
                     flag = True
                     break
@@ -110,7 +110,7 @@ class Perceptron(BaseEstimator):
             Predicted responses of given samples
         """
         if self.include_intercept_:
-            X = np.c_[X, np.ones(X.shape[0])]
+            X = np.c_[np.ones(X.shape[0]), X]
         answer = X @ self.coefs_
         answer[answer == 0] = -1
         return np.sign(answer)
