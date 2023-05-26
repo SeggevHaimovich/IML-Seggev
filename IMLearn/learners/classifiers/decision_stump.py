@@ -45,9 +45,9 @@ class DecisionStump(BaseEstimator):
         for i in range(X.shape[1]):
             cur_vec = X[:, i]
             threshold_plus, loss_plus = self._find_threshold(cur_vec, y, 1)
+            threshold_minus, loss_minus = self._find_threshold(cur_vec, y, -1)
             if loss_plus < best_loss:
                 best_feature, best_threshold, best_loss, best_sign = i, threshold_plus, loss_plus, 1
-            threshold_minus, loss_minus = self._find_threshold(cur_vec, y, -1)
             if loss_minus < best_loss:
                 best_feature, best_threshold, best_loss, best_sign = i, threshold_minus, loss_minus, -1
         self.threshold_, self.j_, self.sign_ = best_threshold, best_feature, best_sign
@@ -74,7 +74,8 @@ class DecisionStump(BaseEstimator):
         Feature values strictly below threshold are predicted as `-sign` whereas values which equal
         to or above the threshold are predicted as `sign`
         """
-        return np.where(X[self.j_] >= self.threshold_, self.sign_, -self.sign_)
+        return np.where(X[:, self.j_] >= self.threshold_, self.sign_,
+                        -self.sign_)
 
     def _find_threshold(self, values: np.ndarray, labels: np.ndarray,
                         sign: int) -> Tuple[float, float]:
@@ -111,7 +112,6 @@ class DecisionStump(BaseEstimator):
         vl = np.c_[values, labels]
         vl = vl[vl[:, 0].argsort()]
         values, labels = vl[:, 0], vl[:, 1]
-        sign = 0
         num_of_errors = np.zeros_like(values)
         num_of_errors[0] = np.count_nonzero(labels != sign)
         for i in range(1, len(labels)):
