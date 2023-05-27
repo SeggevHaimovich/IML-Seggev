@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Tuple, NoReturn
 from ...base import BaseEstimator
 import numpy as np
+import pandas as pd
 from itertools import product
 
 
@@ -40,16 +41,24 @@ class DecisionStump(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        # raise NotImplementedError()
         best_feature, best_threshold, best_loss, best_sign = 0, None, np.inf, 1
-        for i in range(X.shape[1]):
-            cur_vec = X[:, i]
-            threshold_plus, loss_plus = self._find_threshold(cur_vec, y, 1)
-            threshold_minus, loss_minus = self._find_threshold(cur_vec, y, -1)
+        if X.ndim == 1:
+            threshold_plus, loss_plus = self._find_threshold(X, y, 1)
+            threshold_minus, loss_minus = self._find_threshold(X, y, -1)
             if loss_plus < best_loss:
-                best_feature, best_threshold, best_loss, best_sign = i, threshold_plus, loss_plus, 1
+                best_feature, best_threshold, best_loss, best_sign = 0, threshold_plus, loss_plus, 1
             if loss_minus < best_loss:
-                best_feature, best_threshold, best_loss, best_sign = i, threshold_minus, loss_minus, -1
+                best_feature, best_threshold, best_loss, best_sign = 0, threshold_minus, loss_minus, -1
+            self.threshold_, self.j_, self.sign_ = best_threshold, best_feature, best_sign
+        else:
+            for i in range(X.shape[1]):
+                cur_vec = X[:, i]
+                threshold_plus, loss_plus = self._find_threshold(cur_vec, y, 1)
+                threshold_minus, loss_minus = self._find_threshold(cur_vec, y, -1)
+                if loss_plus < best_loss:
+                    best_feature, best_threshold, best_loss, best_sign = i, threshold_plus, loss_plus, 1
+                if loss_minus < best_loss:
+                    best_feature, best_threshold, best_loss, best_sign = i, threshold_minus, loss_minus, -1
         self.threshold_, self.j_, self.sign_ = best_threshold, best_feature, best_sign
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -108,19 +117,26 @@ class DecisionStump(BaseEstimator):
         For every tested threshold, values strictly below threshold are predicted as `-sign` whereas values
         which equal to or above the threshold are predicted as `sign`
         """
-        # raise NotImplementedError()
         vl = np.c_[values, labels]
         vl = vl[vl[:, 0].argsort()]
         values, labels = vl[:, 0], vl[:, 1]
+
+        # vl2 = pd.DataFrame(np.c_[values, labels], columns=['x', 'y'])
+        # vl2 = vl2.groupby(vl2.x).sum()
+        # values, labels = vl2.index.to_numpy(), vl2.y.to_numpy()
         num_of_errors = np.zeros_like(values)
-        num_of_errors[0] = np.count_nonzero(labels != sign)
+        is_first_time = np.zeros_like(values)
+        num_of_errors[0] = np.abs(np.sum(np.where(labels * sign < 0, labels, 0)))
+        is_first_time[0] = 1
+
         for i in range(1, len(labels)):
-            num_of_errors[i] = \
-                num_of_errors[i - 1] - 1 if labels[i - 1] != sign \
-                    else num_of_errors[i - 1] + 1
+            if values[i-1] != values[i]:
+                is_first_time[i] = 1
+            num_of_errors[i] = num_of_errors[i - 1] + labels[i-1] * sign
+        num_of_errors[is_first_time != 1] = 1
         index = np.argmin(num_of_errors)
         thr = values[index]
-        thr_err = num_of_errors[index] / len(num_of_errors)
+        thr_err = num_of_errors[index]
         return thr, thr_err
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
