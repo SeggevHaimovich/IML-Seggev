@@ -60,7 +60,7 @@ class AdaBoost(BaseEstimator):
         self.D_[0] = self.D_[0] / len(y)
         S = np.c_[X, y]
         for t in range(self.iterations_):
-            # todo is this how they ment us to use wl?
+            # todo is this the way they wanted us to use wl?
             cur_model = self.wl_(self.D_[t], S)
             self.models_.append(cur_model)
             cur_predict = cur_model.predict(X)
@@ -72,9 +72,10 @@ class AdaBoost(BaseEstimator):
                 self.models_ = [cur_model]
                 return
             self.weights_.append(0.5 * np.log((1 - epsilon) / epsilon))
-            self.D_.append(self.D_[t] * np.exp(-self.weights_[t] * y * cur_predict))
-            cur_sum = np.sum(self.D_[t+1])
-            self.D_[t+1] /= cur_sum
+            self.D_.append(
+                self.D_[t] * np.exp(-self.weights_[t] * y * cur_predict))
+            cur_sum = np.sum(self.D_[t + 1])
+            self.D_[t + 1] /= cur_sum
 
     def _predict(self, X):
         """
@@ -131,7 +132,7 @@ class AdaBoost(BaseEstimator):
         final = np.zeros_like(len(X))
         for i in range(T):
             final = final + self.weights_[i] * self.models_[i].predict(X)
-        return np.where(final >= 0, 1,-1)
+        return np.where(final >= 0, 1, -1)
 
     def partial_loss(self, X: np.ndarray, y: np.ndarray, T: int) -> float:
         """
@@ -154,4 +155,4 @@ class AdaBoost(BaseEstimator):
             Performance under missclassification loss function
         """
         from ..metrics import misclassification_error
-        return misclassification_error(y, self.partial_predict(X,T))
+        return misclassification_error(y, self.partial_predict(X, T))

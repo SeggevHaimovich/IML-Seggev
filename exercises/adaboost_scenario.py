@@ -5,6 +5,10 @@ from IMLearn.learners.classifiers import DecisionStump
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import os
+from IMLearn.metrics.loss_functions import accuracy
+
+IMG_PATH = "..\\images\\Ex4"
 
 
 def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -38,24 +42,110 @@ def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=500):
-    (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
+def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000,
+                              test_size=500):
+    (train_X, train_y), (test_X, test_y) = generate_data(train_size,
+                                                         noise), generate_data(
+        test_size, noise)
+    lims = np.array([np.r_[train_X, test_X].min(axis=0),
+                     np.r_[train_X, test_X].max(axis=0)]).T + np.array(
+        [-.1, .1])
+    symbols = np.array(["stam", "circle", "x"])
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    raise NotImplementedError()
+    def wl(D, S):
+        X, y = S[:, :-1], S[:, -1]
+        y = y * D
+        return DecisionStump().fit(X, y)
+
+    ada = AdaBoost(wl, n_learners)
+    ada.fit(train_X, train_y)
+    losses_train = []
+    losses_test = []
+    T = np.arange(1, n_learners + 1)
+    for t in T:
+        losses_train.append(ada.partial_loss(train_X, train_y, t))
+        losses_test.append(ada.partial_loss(test_X, test_y, t))
+
+    fig = go.Figure(data=[go.Scatter(x=T, y=losses_train, name="train"),
+                          go.Scatter(x=T, y=losses_test, name="test")],
+                    layout=go.Layout(
+                        title=f"Train and Test Losses over AdaBoost size with noise {noise}"))
+    fig.write_image(os.path.join(IMG_PATH, f"train_and_test_losses_with_noise_{noise}.png"),
+                    format="png", engine="orca")
 
     # Question 2: Plotting decision surfaces
-    T = [5, 50, 100, 250]
-    lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
-    raise NotImplementedError()
+    specific_T = [5, 50, 100, 250]
+
+    for t in specific_T:
+        foo = lambda a: ada.partial_predict(a, t)
+        fig = go.Figure(data=[
+            decision_surface(foo, lims[0], lims[1],
+                             showscale=False),
+            go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers",
+                       showlegend=False,
+                       marker=dict(color=test_y,
+                                   symbol=symbols[test_y.astype(int)],
+                                   colorscale=[custom[0], custom[-1]],
+                                   line=dict(color="black", width=1)))],
+            layout=go.Layout(title=f"Decision Boundary with {t} "
+                                   f"weak learners (Decision stump) with noise {noise}")
+        )
+        fig.write_image(
+            os.path.join(IMG_PATH, f"test_pred_with_{t}_learners_with_noise_{noise}.png"),
+            format="png", engine="orca")
 
     # Question 3: Decision surface of best performing ensemble
-    raise NotImplementedError()
+    best_num = T[np.argmin(losses_test)]
+    foo = lambda a: ada.partial_predict(a, best_num)
+    accu = accuracy(test_y, ada.partial_predict(test_X, best_num))
+    fig = go.Figure(data=[
+        decision_surface(foo, lims[0], lims[1],
+                         showscale=False),
+        go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers",
+                   showlegend=False,
+                   marker=dict(color=test_y,
+                               symbol=symbols[test_y.astype(int)],
+                               colorscale=[custom[0], custom[-1]],
+                               line=dict(color="black", width=1)))],
+        layout=go.Layout(title=f"Decision Boundary with {best_num} "
+                               f"weak learners (Decision stump)<br>"
+                               f"the best number of weak learners<br> "
+                               f"with noise {noise}, "
+                               f"accurecy:"
+                               f"{accu}",
+                         margin=dict(t=100))
+    )
+    fig.write_image(
+        os.path.join(IMG_PATH, f"best_num_of_learners_with_noise_{noise}.png"),
+        format="png", engine="orca")
 
     # Question 4: Decision surface with weighted samples
-    raise NotImplementedError()
+    relevant_weights = ada.D_[-1]
+    fig = go.Figure(data=[
+        decision_surface(ada.predict, lims[0], lims[1],
+                         showscale=False),
+        go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers",
+                   showlegend=False,
+                   marker=dict(color=test_y,
+                               symbol=symbols[test_y.astype(int)],
+                               colorscale=[custom[0], custom[-1]],
+                               line=dict(color="black", width=1),
+                               size=(relevant_weights / np.max(
+                                   relevant_weights)) * 50))],
+        layout=go.Layout(title=f"Decision Boundary with {T[-1]} "
+                               f"weak learners (Decision stump)<br> "
+                               f"with noise {noise}, "
+                               f"accurecy:"
+                               f"{accuracy(test_y, ada.predict(test_X))}",
+                         margin=dict(t=100))
+    )
+    fig.write_image(
+        os.path.join(IMG_PATH, f"last_iteration_size_by_weights_with_noise_{noise}.png"),
+        format="png", engine="orca")
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    raise NotImplementedError()
+    fit_and_evaluate_adaboost(noise=0)
+    fit_and_evaluate_adaboost(noise=0.4)
