@@ -65,7 +65,6 @@ class AdaBoost(BaseEstimator):
             self.models_.append(cur_model)
             cur_predict = cur_model.predict(X)
             epsilon = np.sum(self.D_[t] * np.where(cur_predict != y, 1, 0))
-            # todo if epsilon eq 0, do i really need to do this?
             if epsilon == 0:
                 self.D_ = [np.ones_like(y)]
                 self.weights_ = [1]
@@ -130,6 +129,7 @@ class AdaBoost(BaseEstimator):
             Predicted responses of given samples
         """
         final = np.zeros_like(len(X))
+        # todo without for
         for i in range(T):
             final = final + self.weights_[i] * self.models_[i].predict(X)
         return np.where(final >= 0, 1, -1)
