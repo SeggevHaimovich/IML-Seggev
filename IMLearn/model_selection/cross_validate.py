@@ -38,16 +38,21 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    rand_indices = np.random.permutation(np.arange(len(y)))
-    parts = np.array_split(rand_indices, cv)
-    train_losses = []
-    valid_losses = []
+    ### random choice ###
+    # rand_indices = np.random.permutation(np.arange(len(y)))
+    # parts = np.array_split(rand_indices, cv)
+
+    ### non-random choice ###
+    parts = np.array_split(np.arange(len(y)), cv)
+
+    train_loss = 0
+    valid_loss = 0
     for i in range(cv):
         train_X = np.delete(X, parts[i], axis=0)
         train_y = np.delete(y, parts[i], axis=0)
         test_X = X[parts[i]]
         test_y = y[parts[i]]
         cur_estimator = estimator.fit(train_X, train_y)
-        train_losses.append(scoring(cur_estimator.predict(train_X), train_y))
-        valid_losses.append(scoring(cur_estimator.predict(test_X), test_y))
-    return float(np.mean(train_losses)), float(np.std(valid_losses))
+        train_loss += scoring(cur_estimator.predict(train_X), train_y)
+        valid_loss += scoring(cur_estimator.predict(test_X), test_y)
+    return train_loss / cv, valid_loss / cv

@@ -73,12 +73,12 @@ class RidgeRegression(BaseEstimator):
         u, sigma, v = np.linalg.svd(X, full_matrices=False)
         sigma_lam = sigma / (sigma ** 2 + self.lam_)
 
-        start = time.time()
-        try1 = np.einsum('ij, jk, kl->il', v.T, np.diag(sigma_lam), u.T)
-        end1 = time.time()
+        # start = time.time()
+        # try1 = np.einsum('ij, jk, kl->il', v.T, np.diag(sigma_lam), u.T)
+        # end1 = time.time()
         try2 = ((v.T * sigma_lam) @ u.T)
-        end2 = time.time()
-        print(end1 - start, end2-end1)
+        # end2 = time.time()
+        # print(end1 - start, end2-end1)
         self.coefs_ = try2 @ y
 
         ##### option 2 #####
