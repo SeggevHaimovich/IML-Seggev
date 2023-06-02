@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 import os
 from IMLearn.metrics.loss_functions import accuracy
 
-IMG_PATH = "..\\images\\Ex4"
+IMG_PATH = "..\\images\\Ex4\\adaboost"
 
 
 def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:

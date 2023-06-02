@@ -5,12 +5,23 @@ from sklearn import datasets
 from IMLearn.metrics import mean_square_error
 from IMLearn.utils import split_train_test
 from IMLearn.model_selection import cross_validate
-from IMLearn.learners.regressors import PolynomialFitting, LinearRegression, RidgeRegression
+from IMLearn.learners.regressors import PolynomialFitting, LinearRegression, \
+    RidgeRegression
 from sklearn.linear_model import Lasso
 
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import os
+
+IMG_PATH = "..\\images\\Ex4\\model_selection"
+
+
+def load_data(n_train):
+    X, y = datasets.load_diabetes(return_X_y=True)
+    indices = np.random.choice(len(y), n_train)
+    return X[indices], y[indices], np.delete(X, indices, axis=0), np.delete(y,
+                                                                            indices)
 
 
 def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
@@ -36,7 +47,8 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     raise NotImplementedError()
 
 
-def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 500):
+def select_regularization_parameter(n_samples: int = 50,
+                                    n_evaluations: int = 500):
     """
     Using sklearn's diabetes dataset use cross-validation to select the best fitting regularization parameter
     values for Ridge and Lasso regressions
@@ -50,10 +62,38 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
         Number of regularization parameter values to evaluate for each of the algorithms
     """
     # Question 1 - Load diabetes dataset and split into training and testing portions
-    raise NotImplementedError()
+    train_X, train_y, test_X, test_y = load_data(n_samples)
 
     # Question 2 - Perform CV for different values of the regularization parameter for Ridge and Lasso regressions
-    raise NotImplementedError()
+    start_val, end_val = 0, 10
+    lam_vals = np.linspace(start_val, end_val, num=n_evaluations)
+    ridge_valid_losses, ridge_train_losses, lasso_valid_losses, \
+        lasso_train_losses = [], [], [], []
+    for lam in lam_vals:
+        train, valid = cross_validate(RidgeRegression(lam), train_X, train_y,
+                                      mean_square_error, 5)
+        ridge_train_losses.append(train)
+        ridge_valid_losses.append(valid)
+        train, valid = cross_validate(Lasso(alpha=lam), train_X, train_y,
+                                      mean_square_error, 5)
+        lasso_train_losses.append(train)
+        lasso_valid_losses.append(valid)
+
+    fig = make_subplots(rows=1, cols=2,
+                        horizontal_spacing=0.01, vertical_spacing=.03)
+
+    fig.add_traces([go.Scatter(x=lam_vals, y=ridge_train_losses, mode="lines"),
+                    go.Scatter(x=lam_vals, y=ridge_valid_losses, mode="lines"),
+                    go.Scatter(x=lam_vals, y=lasso_train_losses, mode="lines"),
+                    go.Scatter(x=lam_vals, y=lasso_valid_losses, mode="lines"),
+                    ],
+                   rows=[1, 1, 1, 1], cols=[1, 1, 2, 2])
+    fig.update_layout(
+        title="bla", width=1500, height=500,
+        margin=dict(t=100)) \
+        .update_xaxes(visible=False).update_yaxes(visible=False)
+    fig.write_image(os.path.join(IMG_PATH, "bla", ".png"),
+                    format="png", engine="orca")
 
     # Question 3 - Compare best Ridge model, best Lasso model and Least Squares model
     raise NotImplementedError()
@@ -61,4 +101,5 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
 
 if __name__ == '__main__':
     np.random.seed(0)
-    raise NotImplementedError()
+    select_regularization_parameter()
+    print("finish")
