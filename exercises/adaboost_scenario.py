@@ -44,21 +44,20 @@ def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
 
 def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000,
                               test_size=500):
-    (train_X, train_y), (test_X, test_y) = generate_data(train_size,
-                                                         noise), generate_data(
-        test_size, noise)
+    (train_X, train_y), (test_X, test_y) = \
+        generate_data(train_size, noise), generate_data(test_size, noise)
     lims = np.array([np.r_[train_X, test_X].min(axis=0),
-                     np.r_[train_X, test_X].max(axis=0)]).T + np.array(
-        [-.1, .1])
-    symbols = np.array(["stam", "circle", "x"])
+                     np.r_[train_X, test_X].max(axis=0)]).T + \
+           np.array([-.1, .1])
+    symbols = np.array(["non-relevant", "circle", "x"])
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    def wl(D, S):
-        X, y = S[:, :-1], S[:, -1]
-        y = y * D
-        return DecisionStump().fit(X, y)
+    # def wl(D, S):
+    #     X, y = S[:, :-1], S[:, -1]
+    #     y = y * D
+    #     return DecisionStump().fit(X, y)
 
-    ada = AdaBoost(wl, n_learners)
+    ada = AdaBoost(DecisionStump, n_learners)
     ada.fit(train_X, train_y)
     losses_train = []
     losses_test = []
@@ -72,7 +71,9 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000,
                           go.Scatter(x=T, y=losses_test, name="test")],
                     layout=go.Layout(
                         title=f"Train and Test Losses over AdaBoost size with"
-                              f" noise {noise}"))
+                              f" noise {noise}",
+                        xaxis_title="Number of Iterations",
+                        yaxis_title="Loss"))
     fig.write_image(os.path.join(IMG_PATH,
                                  f"train_and_test_losses_with_noise_"
                                  f"{noise}.png"),
@@ -99,7 +100,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000,
                                                            custom[-1]],
                                                line=dict(color="black",
                                                          width=1)))],
-                       rows=1, cols=i+1)
+                       rows=1, cols=i + 1)
     fig.update_layout(
         title=f"Decision Boundary with different numbers of weak learners"
               f" (Decision stumps) with noise {noise}", width=1500, height=500,
@@ -144,21 +145,20 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000,
     fig = go.Figure(data=[
         decision_surface(ada.predict, lims[0], lims[1],
                          showscale=False),
-        go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers",
+        go.Scatter(x=train_X[:, 0], y=train_X[:, 1], mode="markers",
                    showlegend=False,
-                   marker=dict(color=test_y,
-                               symbol=symbols[test_y.astype(int)],
+                   marker=dict(color=train_y,
+                               symbol=symbols[train_y.astype(int)],
                                colorscale=[custom[0], custom[-1]],
                                line=dict(color="black", width=1),
-                               size=(relevant_weights / np.max(
-                                   relevant_weights)) * 30))],
+                               size=((relevant_weights * 15) / np.max(
+                                   relevant_weights))))],
         layout=go.Layout(title=f"Decision Boundary with {T[-1]} "
                                f"weak learners (Decision stump)<br> "
-                               f"with noise {noise}, "
-                               f"accurecy:"
-                               f"{accuracy(test_y, ada.predict(test_X))}",
+                               f"with noise {noise}",
                          margin=dict(t=100))
     )
+
     fig.write_image(
         os.path.join(IMG_PATH,
                      f"last_iteration_size_by_weights_with_noise_{noise}.png"),

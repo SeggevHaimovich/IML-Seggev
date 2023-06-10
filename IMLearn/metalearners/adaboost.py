@@ -58,15 +58,16 @@ class AdaBoost(BaseEstimator):
         self.weights_ = []
         self.D_ = [np.ones_like(y)]
         self.D_[0] = self.D_[0] / len(y)
-        S = np.c_[X, y]
+        # S = np.c_[X, y]
         for t in range(self.iterations_):
-            # todo is this the way they wanted us to use wl?
-            cur_model = self.wl_(self.D_[t], S)
+            y_weighted = y * self.D_[t]
+            cur_model = self.wl_().fit(X, y_weighted)
             self.models_.append(cur_model)
             cur_predict = cur_model.predict(X)
             epsilon = np.sum(self.D_[t] * np.where(cur_predict != y, 1, 0))
             if epsilon == 0:
                 self.D_ = [np.ones_like(y)]
+                self.D_[0] = self.D_[0] / len(y)
                 self.weights_ = [1]
                 self.models_ = [cur_model]
                 return
@@ -75,6 +76,7 @@ class AdaBoost(BaseEstimator):
                 self.D_[t] * np.exp(-self.weights_[t] * y * cur_predict))
             cur_sum = np.sum(self.D_[t + 1])
             self.D_[t + 1] /= cur_sum
+        self.D_.pop()
 
     def _predict(self, X):
         """

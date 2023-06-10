@@ -59,30 +59,34 @@ class RidgeRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        # todo there is a problem with the intercept, maybe should do something
-        #  instead of identity matrix
-        #  https://moodle2.cs.huji.ac.il/nu22/mod/forum/discuss.php?d=89494
-        import time
+        # the intercept don't suppose to be affected from the lambda so we put
+        # 0 instead
+        # https://moodle2.cs.huji.ac.il/nu22/mod/forum/discuss.php?d=89494
+
         if self.include_intercept_:
             X = np.c_[np.ones(X.shape[0]).T, X]
 
         if self.lam_ == 0:
             self.coefs_ = np.linalg.pinv(X) @ y
             return
-        ##### option 1 #####
-        u, sigma, v = np.linalg.svd(X, full_matrices=False)
-        sigma_lam = sigma / (sigma ** 2 + self.lam_)
 
-        # start = time.time()
-        # try1 = np.einsum('ij, jk, kl->il', v.T, np.diag(sigma_lam), u.T)
-        # end1 = time.time()
-        try2 = ((v.T * sigma_lam) @ u.T)
-        # end2 = time.time()
-        # print(end1 - start, end2-end1)
-        self.coefs_ = try2 @ y
+        ##### option 1 #####
+        # u, sigma, v = np.linalg.svd(X, full_matrices=False)
+        # sigma_lam = sigma / (sigma ** 2 + self.lam_)
+        # if self.include_intercept_:
+        #     if sigma[0] == 0:
+        #         sigma_lam[0] = 0
+        #     else:
+        #         sigma_lam[0] = 1 / (sigma[0])
+        #
+        # self.coefs_ = ((v.T * sigma_lam) @ u.T) @ y
 
         ##### option 2 #####
-        # self.coefs_ = np.linalg.inv(X.T @ X + self.lam_ * np.identity(X.shape[1])) @ X.T @ y
+        lambda_identity = np.identity(X.shape[1])
+        if self.include_intercept_:
+            lambda_identity[0, 0] = 0
+        self.coefs_ = np.linalg.inv(
+            X.T @ X + self.lam_ * lambda_identity) @ X.T @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
