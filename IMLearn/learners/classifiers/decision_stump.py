@@ -118,8 +118,10 @@ class DecisionStump(BaseEstimator):
         vl = np.c_[values, labels]
         vl = vl[vl[:, 0].argsort()]
         values, labels = vl[:, 0], vl[:, 1]
+        sum_of_labels = np.sum(np.abs(labels))
+        labels = labels / sum_of_labels
 
-        loss = np.zeros_like(values)
+        loss = np.zeros_like(values, dtype=np.float)
         is_first_time = np.zeros_like(values)
         loss[0] = np.abs(np.sum(np.where(labels * sign < 0, labels, 0)))
         is_first_time[0] = 1
@@ -128,13 +130,30 @@ class DecisionStump(BaseEstimator):
             if values[i - 1] != values[i]:
                 is_first_time[i] = 1
             loss[i] = loss[i - 1] + labels[i - 1] * sign
-        loss[is_first_time != 1] = np.inf
+        maxi = np.max(loss) + 1
+        loss[is_first_time != 1] = maxi
         index = np.argmin(loss)
         if index == 0:
             thr = -np.inf
+            thr_err = loss[0]
+        elif index == len(labels) - 1:
+            if sign == 1:
+                if labels[index] > 0:
+                    thr = values[index]
+                    thr_err = loss[index]
+                else:
+                    thr = np.inf
+                    thr_err = loss[index] + labels[index]
+            else:
+                if labels[index] > 0:
+                    thr = np.inf
+                    thr_err = loss[index] - labels[index]
+                else:
+                    thr = values[index]
+                    thr_err = loss[index]
         else:
             thr = values[index]
-        thr_err = loss[index]
+            thr_err = loss[index]
         return thr, thr_err
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
