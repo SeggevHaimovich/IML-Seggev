@@ -39,6 +39,7 @@ class GradientDescent:
         Callable function receives as input any argument relevant for the current GD iteration. Arguments
         are specified in the `GradientDescent.fit` function
     """
+
     def __init__(self,
                  learning_rate: BaseLR = FixedLR(1e-3),
                  tol: float = 1e-5,
@@ -119,4 +120,38 @@ class GradientDescent:
                 Euclidean norm of w^(t)-w^(t-1)
 
         """
-        raise NotImplementedError()
+        def step(i):
+            prev = f.weights
+            f.weights = (f.weights - self.learning_rate_.lr_step(t=i)
+                         * f.compute_jacobian(X=X, y=y))
+            self.callback_(solver=self, weights=f.weights, val=f.compute_output(X=X, y=y),
+                           grad=f.compute_jacobian(X=X, y=y), t=i, eta=self.learning_rate_.lr_step(t=i),
+                           delta=np.linalg.norm(prev - f.weights))
+            return prev
+        self.callback_(solver=self, weights=f.weights, val=f.compute_output(X=X, y=y),
+                       grad=f.compute_jacobian(X=X, y=y), t=0, eta=self.learning_rate_.lr_step(t=-1),
+                       delta=np.linalg.norm(0 - f.weights))
+        if self.out_type_ == 'last':
+            for t in range(self.max_iter_):
+                prev_weights = step(t+1)
+                if np.linalg.norm(prev_weights - f.weights) < self.tol_:
+                    return f.weights
+            return f.weights
+        if self.out_type_ == 'best':
+            best = f.weights
+            best_output = f.compute_output(X=X, y=y)
+            for t in range(self.max_iter_):
+                prev_weights = step(t+1)
+                if f.compute_output(X=X, y=y) < best_output:
+                    best = f.weights
+                    best_output = f.compute_output(X=X, y=y)
+                if np.linalg.norm(prev_weights - f.weights) < self.tol_:
+                    return best
+            return best
+        avg = f.weights
+        for t in range(self.max_iter_):
+            prev_weights = step(t+1)
+            avg += f.weights
+            if np.linalg.norm(prev_weights - f.weights) < self.tol_:
+                return avg / (t + 1)
+        return avg / self.max_iter_
