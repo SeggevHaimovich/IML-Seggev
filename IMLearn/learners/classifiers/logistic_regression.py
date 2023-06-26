@@ -88,7 +88,6 @@ class LogisticRegression(BaseEstimator):
         Fits model using specified `self.optimizer_` passed when instantiating class and includes an intercept
         if specified by `self.include_intercept_
         """
-        # todo Is this the right starting point?
         starting_point = np.random.normal(size=X.shape[1]) / np.sqrt(X.shape[1])
         if self.include_intercept_:
             starting_point = np.r_[1, starting_point]

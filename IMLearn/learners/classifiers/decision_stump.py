@@ -48,7 +48,6 @@ class DecisionStump(BaseEstimator):
                     best_feature, best_threshold, best_loss, best_sign = 0, \
                         threshold, loss, sign
         else:
-            # todo without for
             for i in range(X.shape[1]):
                 cur_vec = X[:, i]
                 for sign in [-1, 1]:

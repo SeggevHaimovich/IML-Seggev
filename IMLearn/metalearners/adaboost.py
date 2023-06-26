@@ -131,7 +131,6 @@ class AdaBoost(BaseEstimator):
             Predicted responses of given samples
         """
         final = np.zeros_like(len(X))
-        # todo without for
         for i in range(T):
             final = final + self.weights_[i] * self.models_[i].predict(X)
         return np.where(final >= 0, 1, -1)

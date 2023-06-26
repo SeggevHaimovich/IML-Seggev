@@ -93,35 +93,44 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
 
 def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                  etas: Tuple[float] = (1, .1, .01, .001)):
+    min_val_l1, min_val_l2 = np.inf, np.inf
     for eta in etas:
         lr = FixedLR(eta)
         callback1, values1, weights1 = get_gd_state_recorder_callback()
         gd = GradientDescent(learning_rate=lr, callback=callback1)
         l1 = L1(init)
         gd.fit(l1, None, None)
+        cur_min_l1 = np.min(values1)
+        if cur_min_l1 < min_val_l1:
+            min_val_l1 = cur_min_l1
 
         callback2, values2, weights2 = get_gd_state_recorder_callback()
         gd = GradientDescent(learning_rate=lr, callback=callback2)
         l2 = L2(init)
         gd.fit(l2, None, None)
+        cur_min_l2 = np.min(values2)
+        if cur_min_l2 < min_val_l2:
+            min_val_l2 = cur_min_l2
 
-        # fig = plot_descent_path(L1, np.array(weights1), title=f"Path of GD of L1 and size of step: {eta}")
-        # fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_fixed_weights_{eta}.png"), format="png",
-        #                 engine='orca')
-        # fig = plot_descent_path(L2, np.array(weights2), title=f"Path of GD of L2 and size of step: {eta}")
-        # fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L2_fixed_weights_{eta}.png"), format="png",
-        #                 engine='orca')
-        #
-        # fig = go.Figure(go.Scatter(x=np.arange(len(values1)), y=values1),
-        #                 go.Layout(title="Norm L1 as a function of gd iteration", xaxis_title="iteration",
-        #                           yaxis_title="norm"))
-        # fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_fixed_values_{eta}.png"), format="png",
-        #                 engine='orca')
-        # fig = go.Figure(go.Scatter(x=np.arange(len(values2)), y=values2),
-        #                 go.Layout(title="Norm L2 as a function of gd iteration", xaxis_title="iteration",
-        #                           yaxis_title="norm"))
-        # fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L2_fixed_values_{eta}.png"), format="png",
-        #                 engine='orca')
+        fig = plot_descent_path(L1, np.array(weights1), title=f"Path of GD of L1 and size of step: {eta}")
+        fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_fixed_weights_{eta}.png"), format="png",
+                        engine='orca')
+        fig = plot_descent_path(L2, np.array(weights2), title=f"Path of GD of L2 and size of step: {eta}")
+        fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L2_fixed_weights_{eta}.png"), format="png",
+                        engine='orca')
+
+        fig = go.Figure(go.Scatter(x=np.arange(len(values1)), y=values1),
+                        go.Layout(title=f"Norm L1 as a function of gd iteration step: {eta}", xaxis_title="iteration",
+                                  yaxis_title="norm"))
+        fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_fixed_values_{eta}.png"), format="png",
+                        engine='orca')
+        fig = go.Figure(go.Scatter(x=np.arange(len(values2)), y=values2),
+                        go.Layout(title=f"Norm L2 as a function of gd iteration step: {eta}", xaxis_title="iteration",
+                                  yaxis_title="norm"))
+        fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L2_fixed_values_{eta}.png"), format="png",
+                        engine='orca')
+    print("Lowest loss for L1 is: ", min_val_l1)
+    print("Lowest loss for L2 is: ", min_val_l2)
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
@@ -183,25 +192,25 @@ def fit_logistic_regression():
     from sklearn.metrics import roc_curve, auc
     fpr, tpr, thresholds = roc_curve(y_train, y_prob)
 
-    # from utils import custom
-    # c = [custom[0], custom[-1]]
-    # fig = go.Figure(
-    #     data=[go.Scatter(x=[0, 1], y=[0, 1], mode="lines", line=dict(color="black", dash='dash'),
-    #                      name="Random Class Assignment"),
-    #           go.Scatter(x=fpr, y=tpr, mode='markers+lines', text=thresholds, name="", showlegend=False, marker_size=5,
-    #                      marker_color=c[1][1],
-    #                      hovertemplate="<b>Threshold:</b>%{text:.3f}<br>FPR: %{x:.3f}<br>TPR: %{y:.3f}")],
-    #     layout=go.Layout(title=rf"$\text{{ROC Curve Of Fitted Model - AUC}}={auc(fpr, tpr):.6f}$",
-    #                      xaxis=dict(title=r"$\text{False Positive Rate (FPR)}$"),
-    #                      yaxis=dict(title=r"$\text{True Positive Rate (TPR)}$")))
-    # fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"roc_curve.png"), format="png",
-    #                 engine='orca')
+    from utils import custom
+    c = [custom[0], custom[-1]]
+    fig = go.Figure(
+        data=[go.Scatter(x=[0, 1], y=[0, 1], mode="lines", line=dict(color="black", dash='dash'),
+                         name="Random Class Assignment"),
+              go.Scatter(x=fpr, y=tpr, mode='markers+lines', text=thresholds, name="", showlegend=False, marker_size=5,
+                         marker_color=c[1][1],
+                         hovertemplate="<b>Threshold:</b>%{text:.3f}<br>FPR: %{x:.3f}<br>TPR: %{y:.3f}")],
+        layout=go.Layout(title=rf"$\text{{ROC Curve Of Fitted Model - AUC}}={auc(fpr, tpr):.6f}$",
+                         xaxis=dict(title=r"$\text{False Positive Rate (FPR)}$"),
+                         yaxis=dict(title=r"$\text{True Positive Rate (TPR)}$")))
+    fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"roc_curve.png"), format="png",
+                    engine='orca')
 
     best_index = np.argmax(tpr - fpr)
     best_alpha = fpr[best_index]
 
     log_reg.alpha_ = best_alpha
-    print("The best alpha is: ", best_alpha,
+    print("Question 9: The best alpha is: ", best_alpha,
           " and the test error using this alpha is: ", log_reg.loss(X_test.to_numpy(), y_test.to_numpy()))
 
 
@@ -226,28 +235,22 @@ def fit_logistic_regression():
     log_reg_l1_best = LogisticRegression(solver=gd, penalty='l1', lam=best_lam_l1, alpha=0.5)
     log_reg_l1_best.fit(X_train.to_numpy(), y_train.to_numpy())
     test_error_l1 = log_reg_l1_best.loss(X_test.to_numpy(), y_test.to_numpy())
-    print("the best lambda to l1 penalty is: ", best_lam_l1, " with test error: ", test_error_l1)
+    print("Question 10: The best lambda to l1 penalty is: ", best_lam_l1, " with test error: ", test_error_l1)
 
     best_lam_l2 = lam_vals[np.argmin(valid_losses_l2)]
     log_reg_l2_best = LogisticRegression(solver=gd, penalty='l2', lam=best_lam_l2, alpha=0.5)
     log_reg_l2_best.fit(X_train.to_numpy(), y_train.to_numpy())
     test_error_l2 = log_reg_l2_best.loss(X_test.to_numpy(), y_test.to_numpy())
-    print("the best lambda to l2 penalty is: ", best_lam_l2, " with test error: ", test_error_l2)
+    print("Question 11: The best lambda to l2 penalty is: ", best_lam_l2, " with test error: ", test_error_l2)
 
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=["l1",
-                                                        "l2"])
+    fig = make_subplots(rows=1, cols=2, subplot_titles=["l1", "l2"])
 
-    fig.add_traces([go.Scatter(x=lam_vals, y=train_losses_l1,
-                               mode="lines", name="l1 train"),
-                    go.Scatter(x=lam_vals, y=valid_losses_l1,
-                               mode="lines", name="l1 valid"),
-                    go.Scatter(x=lam_vals, y=train_losses_l2,
-                               mode="lines", name="l2 train"),
-                    go.Scatter(x=lam_vals, y=valid_losses_l2,
-                               mode="lines", name="l2 valid"),
-                    ],
-                   rows=[1, 1, 1, 1], cols=[1, 1, 2, 2])
+    fig.add_traces([go.Scatter(x=lam_vals, y=train_losses_l1, mode="lines", name="l1 train"),
+                    go.Scatter(x=lam_vals, y=valid_losses_l1, mode="lines", name="l1 valid"),
+                    go.Scatter(x=lam_vals, y=train_losses_l2, mode="lines", name="l2 train"),
+                    go.Scatter(x=lam_vals, y=valid_losses_l2, mode="lines", name="l2 valid"),
+                    ], rows=[1, 1, 1, 1], cols=[1, 1, 2, 2])
     fig.update_layout(
         title="Different Regularization parameter - l1 & l2",
         width=800, height=500, margin=dict(t=100))

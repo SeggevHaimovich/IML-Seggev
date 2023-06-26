@@ -36,7 +36,6 @@ class L2(BaseModule):
         """
         if self.weights_ is None:
             return None
-        # todo should it be **2?
         return np.array(np.linalg.norm(self.weights_)) ** 2
         # return np.array(np.linalg.norm(self.weights_))
 
