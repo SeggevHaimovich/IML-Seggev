@@ -244,21 +244,21 @@ def fit_logistic_regression():
     print("Question 11: The best lambda to l2 penalty is: ", best_lam_l2, " with test error: ", test_error_l2)
 
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=["l1", "l2"])
-
-    fig.add_traces([go.Scatter(x=lam_vals, y=train_losses_l1, mode="lines", name="l1 train"),
-                    go.Scatter(x=lam_vals, y=valid_losses_l1, mode="lines", name="l1 valid"),
-                    go.Scatter(x=lam_vals, y=train_losses_l2, mode="lines", name="l2 train"),
-                    go.Scatter(x=lam_vals, y=valid_losses_l2, mode="lines", name="l2 valid"),
-                    ], rows=[1, 1, 1, 1], cols=[1, 1, 2, 2])
-    fig.update_layout(
-        title="Different Regularization parameter - l1 & l2",
-        width=800, height=500, margin=dict(t=100))
-    fig.update_xaxes(title_text=r"$\lambda \text{ value}$", row=1, col=1)
-    fig.update_xaxes(title_text=r"$\lambda \text{ value}$", row=1, col=2)
-    fig.update_yaxes(title_text="Loss", row=1, col=1)
-    fig.write_image(os.path.join(IMAGE_PATH, "l1_&_l2_lambda.png"),
-                    format="png", engine="orca")
+    # fig = make_subplots(rows=1, cols=2, subplot_titles=["l1", "l2"])
+    #
+    # fig.add_traces([go.Scatter(x=lam_vals, y=train_losses_l1, mode="lines", name="l1 train"),
+    #                 go.Scatter(x=lam_vals, y=valid_losses_l1, mode="lines", name="l1 valid"),
+    #                 go.Scatter(x=lam_vals, y=train_losses_l2, mode="lines", name="l2 train"),
+    #                 go.Scatter(x=lam_vals, y=valid_losses_l2, mode="lines", name="l2 valid"),
+    #                 ], rows=[1, 1, 1, 1], cols=[1, 1, 2, 2])
+    # fig.update_layout(
+    #     title="Different Regularization parameter - l1 & l2",
+    #     width=800, height=500, margin=dict(t=100))
+    # fig.update_xaxes(title_text=r"$\lambda \text{ value}$", row=1, col=1)
+    # fig.update_xaxes(title_text=r"$\lambda \text{ value}$", row=1, col=2)
+    # fig.update_yaxes(title_text="Loss", row=1, col=1)
+    # fig.write_image(os.path.join(IMAGE_PATH, "l1_&_l2_lambda.png"),
+    #                 format="png", engine="orca")
 
 
 if __name__ == '__main__':
