@@ -10,12 +10,12 @@ from IMLearn.desent_methods.modules import L1, L2
 from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
 from IMLearn.model_selection.cross_validate import cross_validate
-from IMLearn.metrics import mean_square_error
 from IMLearn.metrics import misclassification_error
 import plotly.graph_objects as go
 import os
 
-IMAGE_PATH = "..\\images\\Ex5"
+# IMAGE_PATH = "..\\images\\Ex5"
+IMAGE_PATH = "."
 
 
 def plot_descent_path(module: Type[BaseModule],
@@ -112,10 +112,10 @@ def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e /
         if cur_min_l2 < min_val_l2:
             min_val_l2 = cur_min_l2
 
-        fig = plot_descent_path(L1, np.array(weights1), title=f"Path of GD of L1 and size of step: {eta}")
+        fig = plot_descent_path(L1, np.array(weights1), title=f"L1 norm and size of step: {eta}")
         fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_fixed_weights_{eta}.png"), format="png",
                         engine='orca')
-        fig = plot_descent_path(L2, np.array(weights2), title=f"Path of GD of L2 and size of step: {eta}")
+        fig = plot_descent_path(L2, np.array(weights2), title=f"L2 norm and size of step: {eta}")
         fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L2_fixed_weights_{eta}.png"), format="png",
                         engine='orca')
 
@@ -137,13 +137,38 @@ def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.
                                     eta: float = .1,
                                     gammas: Tuple[float] = (.9, .95, .99, 1)):
     # Optimize the L1 objective using different decay-rate values of the exponentially decaying learning rate
-    raise NotImplementedError()
+    min_val_l1 = np.inf
+    fig = go.Figure()
+    for gamma in gammas:
+        lr = ExponentialLR(eta, gamma)
+        callback1, values1, weights1 = get_gd_state_recorder_callback()
+        gd = GradientDescent(learning_rate=lr, callback=callback1)
+        l1 = L1(init)
+        gd.fit(l1, None, None)
+        cur_min_l1 = np.min(values1)
+        if cur_min_l1 < min_val_l1:
+            min_val_l1 = cur_min_l1
+        fig.add_trace(go.Scatter(x=np.arange(len(values1)), y=values1, name=f'Decay Rate: {gamma}'))
 
     # Plot algorithm's convergence for the different values of gamma
-    raise NotImplementedError()
+    fig.update_layout(title=f"Norm L1 as a function of exponential gd iteration",
+                      xaxis_title="iteration",
+                      yaxis_title="norm")
+    fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, "L1_expo_values.png"), format="png",
+                    engine='orca')
+    print("Lowest loss for exponential L1 is: ", min_val_l1)
 
     # Plot descent path for gamma=0.95
-    raise NotImplementedError()
+    lr = ExponentialLR(eta, 0.95)
+    callback1, values1, weights1 = get_gd_state_recorder_callback()
+    gd = GradientDescent(learning_rate=lr, callback=callback1)
+    l1 = L1(init)
+    gd.fit(l1, None, None)
+    fig = plot_descent_path(L1, np.array(weights1),
+                            title="exponential learning L1 norm<br>decay rate 0.95")
+    fig.update_layout(margin=dict(t=100))
+    fig.write_image(os.path.join(os.getcwd(), IMAGE_PATH, f"L1_expo_weights_{eta}.png"), format="png",
+                    engine='orca')
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -213,8 +238,6 @@ def fit_logistic_regression():
     print("Question 9: The best alpha is: ", best_alpha,
           " and the test error using this alpha is: ", log_reg.loss(X_test.to_numpy(), y_test.to_numpy()))
 
-
-
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
     gd = GradientDescent(learning_rate=FixedLR(1e-4), max_iter=20000, callback=callback)
@@ -243,7 +266,6 @@ def fit_logistic_regression():
     test_error_l2 = log_reg_l2_best.loss(X_test.to_numpy(), y_test.to_numpy())
     print("Question 11: The best lambda to l2 penalty is: ", best_lam_l2, " with test error: ", test_error_l2)
 
-
     # fig = make_subplots(rows=1, cols=2, subplot_titles=["l1", "l2"])
     #
     # fig.add_traces([go.Scatter(x=lam_vals, y=train_losses_l1, mode="lines", name="l1 train"),
@@ -264,5 +286,5 @@ def fit_logistic_regression():
 if __name__ == '__main__':
     np.random.seed(0)
     compare_fixed_learning_rates()
-    # compare_exponential_decay_rates()
+    compare_exponential_decay_rates()
     fit_logistic_regression()
